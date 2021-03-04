@@ -159,11 +159,11 @@ if ( ! isset( $options['html-head-template'] ) ) {
 		<title>Conversation: {{CHAT_TITLE}}</title>
 		<style type="text/css">
 
-		body { font-family: "Helvetica Neue", sans-serif; font-size: 10pt; }
+		body { font-family: "Helvetica Neue", sans-serif; font-size: 10pt; margin: 5px }
 		p { margin: 0; clear: both; }
 		.timestamp { text-align: center; color: #8e8e93; font-variant: small-caps; font-weight: bold; font-size: 9pt; }
 		.byline { text-align: left; color: #8e8e93; font-size: 9pt; padding-left: 1ex; padding-top: 1ex; margin-bottom: 2px; }
-		img { max-width: 100%; }
+		img { max-width: 100%; max-height: 50vh}
 		.message { text-align: left; color: black; border-radius: 8px; background-color: #e1e1e1; padding: 6px; display: inline-block; max-width: 75%; margin-bottom: 5px; float: left; }
 		.message[data-from="self"] { text-align: right; background-color: #007aff; color: white; float: right;}
 
@@ -185,8 +185,17 @@ if ( ! isset( $options['html-toc-template'] ) ) {
 		<meta charset="UTF-8">
 	    <title>TOC</title>
 	    
-	    <!-- @TODO -->
 		<style type="text/css">
+
+        body { font-family: "Helvetica Neue", sans-serif; font-size: 10pt;}
+        p { margin: 0; clear: both; }
+
+        ul.toc { list-style-type: none; margin: 0px; padding: 0px}
+        ul.toc li { border: 1px solid #e1e1e1; margin: 5px; padding: 1ex}
+        .date_from, .date_to { color: #8e8e93; font-variant: small-caps; font-weight: bold; font-size: 9pt; }
+        .message_from, .message_to { margin-left: 5px; }
+        .date_range { display: none }
+        ul.toc li:hover { background-color: #e1e1e1; }
 
 		</style>
 	</head>
@@ -800,24 +809,53 @@ while ( $row = $contacts->fetchArray() ) {
 
 						// If a file already exists where we want to save this attachment, add a suffix like -1, -2, -3, etc. until we get a unique filename.
 						// But don't copy the file if the destination file is the same as the one we're copying.
+                        // GH: Bugfix. Sadly there's a problem, because multiple identically named attachments (if an image got resized)
+                        //     can exist for the SAME timestamp (if those files were sent at the same time).
+                        //     So instead of renaming to a filename like "FullSizeRender-X.jpg" we now also use
+                        //     "2021-03-03_22-00-30-FullSizeRender-X.jpg" instead. By keeping the timestamp, the uniqueness
+                        //     will be applied on a next run. Before, a file would be renamed to FullSizeRender-X.jpg and then
+                        //     everytime the rebuild was executed, a new -X would be created.
+                        $performCopy = true;
 						while ( file_exists( $attachments_directory . $attachment_filename ) ) {
 							++$suffix;
 
-							$attachment_filename = $filename_base . '-' . $suffix;
+							if ( isset ( $GLOBALS['options']['safe-filenames'] ) ) {
+								$basename = get_safe_filename( $filename_base );
+								$attachment_filename = date( 'Y-m-d_H-i-s', strtotime( $message['timestamp'] ) ) . '-' . $basename . '-' . $suffix;
+							}
+							else {
+								$attachment_filename = date( 'Y-m-d H i s', strtotime( $message['timestamp'] ) ) . ' - ' . $filename_base . '-' . $suffix;
+							}
 
 							if ( $extension ) {
 								$attachment_filename .= '.' . $extension;
 							}
+
+							// Now perform the same identity check
+							if (
+								file_exists( $attachments_directory . $attachment_filename )
+									&& sha1_file( $attachments_directory . $attachment_filename ) == sha1_file( $file_to_copy )
+									&& filesize( $attachments_directory . $attachment_filename ) == filesize( $file_to_copy )
+							) {
+								// They're the same file. We've probably already run this script on the message that includes this file.
+                                $performCopy = false;
+                                // Abort the while statement; the file exists, but is identical.
+                                break 1;
+							}
+
 						}
 
-						copy( $file_to_copy, $attachments_directory . $attachment_filename );
-						$summary['attachments']++;
+						if ($performCopy) {
+							copy( $file_to_copy, $attachments_directory . $attachment_filename );
+							$summary['attachments']++;
+						}
+
 					}
 
 					$html_embed = '';
 
 					if ( strpos( $message['attachment_mime_type'], 'image' ) === 0 ) {
-						$html_embed = '<img src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" />';
+						$html_embed = '<a class="imagelink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" target="_blank"><img loading="lazy" alt="Image" src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" /></a>';
 						$summary['images']++;
 						$chat_stats['images']++;
 					}
@@ -837,7 +875,7 @@ while ( $row = $contacts->fetchArray() ) {
 							$chat_stats['documents']++;
 						}
 
-						$html_embed .= '<a href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '">' . htmlspecialchars( $attachment_filename ) . '</a>';
+						$html_embed .= '<a class="attachmentlink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '">' . htmlspecialchars( $attachment_filename ) . '</a>';
 					}
 				}
 			}
@@ -906,7 +944,6 @@ file_put_contents(
 	<head>
 	    <title>Index</title>
 	</head>
-	<body>
 	<!-- TODO:  How to make this work without frameset? Dunno. 
 	            This is useful here because the TOC can stay on screen and links are targeted.
     -->
@@ -914,7 +951,6 @@ file_put_contents(
         <frame src="toc.html" name="toc" marginwidth="0" marginheight="0" scrolling="auto">
         <frame src="' . $chat_index[0]['file'] . '" name="chat" marginwidth="0" marginheight="0" scrolling="auto">	
     </frameset>
-	</body>
 </html>
 ' );
 
