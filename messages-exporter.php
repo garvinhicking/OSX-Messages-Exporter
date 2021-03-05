@@ -36,6 +36,7 @@ $options = getopt(
         "progress",
         "html-toc-template:",
         "html-toc-loop-template:",
+        "max-messages:"
     )
 );
 
@@ -93,7 +94,7 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
 		. "\n"
 
 		. "    [--html-toc-loop-template /path/to/template/file.html]\n"
-		. "      If set, the script will use the specified filename inside the HTML TOC. Variable substitution is available: {{FILE}}, {{TITLE}}, {{DATE_FROM}}, {{DATE_TO}}, {{MESSAGE_FROM_BODY}}, {{MESSAGE_TO_BODY}}.\n"
+		. "      If set, the script will use the specified filename inside the HTML TOC. Variable substitution is available: {{FILE}}, {{TITLE}}, {{DATE_FROM}}, {{DATE_TO}}, {{MESSAGE_FROM_BODY}}, {{MESSAGE_TO_BODY}} and {{STATS.xxx}}.\n"
 		. "\n"
 
         . "    [--safe-filenames]\n"
@@ -111,6 +112,11 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
         . "    [--progress]\n"
         . "      When set, you will get a (simple) progress report while compiling data and output.\n"
 		. "\n"
+
+		. "    [--max-messages XX]\n"
+		. "      Debugging: When set, you can specify the maximum of messages to write for each chat; allows easier debugging.\n"
+		. "\n"
+
         . "";
 	echo "\n";
 	die();
@@ -164,6 +170,7 @@ if ( ! isset( $options['html-head-template'] ) ) {
 		img { max-width: 100%; max-height: 50vh}
 		.message { text-align: left; color: black; border-radius: 8px; background-color: #e1e1e1; padding: 6px; display: inline-block; max-width: 75%; margin-bottom: 5px; float: left; }
 		.message[data-from="self"] { text-align: right; background-color: #007aff; color: white; float: right;}
+		.skipped-attachment { background-color: red; padding: 5px }
 
 		</style>
 	';
@@ -194,6 +201,7 @@ if ( ! isset( $options['html-toc-template'] ) ) {
         .message_from, .message_to { margin-left: 5px; }
         .date_range { display: none }
         ul.toc li:hover { background-color: #e1e1e1; }
+        .stats { color: #8e8e93; font-variant: small-caps; font-style: italic; font-size: 9pt; }
 
 		</style>
 	</head>
@@ -224,6 +232,7 @@ if ( ! isset( $options['html-toc-loop-template'] ) ) {
                 <div class="date_range">-</div>
                 <div class="date_to">{{DATE_TO}}</div>
         		<div class="message_to">{{MESSAGE_TO_BODY}}</div>
+        		<div class="stats">{{STATS.IMAGES}} images, {{STATS.VIDEOS}} videos, {{STATS.AUDIO}} audio, {{STATS.DOCUMENTS}} files</div>
             </div>
         </li>
 	';
@@ -430,6 +439,11 @@ $version_statement->execute();
 
 $updated_contacts_memo = array();
 
+
+if ( isset( $options['summary'] ) && isset ( $options['max-messages'] ) && $options['max-messages'] ) {
+    echo "DEBUGGING: Limiting export amount to max " . $options['max-messages'] . " messages.\n";
+}
+
 if ( ! isset( $options['r'] ) ) {
 	$chat_db_path = $_SERVER['HOME'] . "/Library/Messages/chat.db";
 
@@ -505,6 +519,11 @@ if ( ! isset( $options['r'] ) ) {
 		$message_index = 0;
 		while ( $message = $messages->fetchArray( SQLITE3_ASSOC ) ) {
 		    $message_index++;
+
+		    // Debugging: Skip further compilation.
+		    if ( isset ( $options['max-messages'] ) && $options['max-messages'] > 0 && $message_index > $options['max-messages'] ) {
+		        break 1;
+            }
 
 			if ( isset( $options['progress'] ) ) {
 				progress_output( $chat_index, $progress_total, $message_index);
@@ -910,15 +929,19 @@ while ( $row = $contacts->fetchArray() ) {
 							if ( $skip_attachments['images'] && strpos( $message['attachment_mime_type'], 'image' ) === 0 ) {
 								$summary['skipped']['images']++;
 								$summary['skipped']['total']++;
+								$is_skipped_attachment = true;
                             } else if ( $skip_attachments['videos'] && strpos( $message['attachment_mime_type'], 'video' ) === 0 ) {
 								$summary['skipped']['videos']++;
 								$summary['skipped']['total']++;
+								$is_skipped_attachment = true;
                             } else if ( $skip_attachments['audio'] && strpos( $message['attachment_mime_type'], 'audio' ) === 0 ) {
 								$summary['skipped']['audio']++;
 								$summary['skipped']['total']++;
+								$is_skipped_attachment = true;
 							} else if ( $skip_attachments['documents'] ) {
 								$summary['skipped']['documents']++;
 								$summary['skipped']['total']++;
+								$is_skipped_attachment = true;
                             } else {
                                 copy( $file_to_copy, $attachments_directory . $attachment_filename );
                             }
@@ -932,6 +955,8 @@ while ( $row = $contacts->fetchArray() ) {
                     if ( strpos( $message['attachment_mime_type'], 'image' ) === 0 ) {
 						if ( ! $is_skipped_attachment ) {
 							$html_embed = '<a class="imagelink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" target="_blank"><img loading="lazy" alt="Image" src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" /></a>';
+                        } else {
+							$html_embed = '<span class="skipped-attachment">[' . $chat_title_for_filesystem . '/' . $attachment_filename . ']</span>' . "\n";
                         }
 						$summary['images']++;
 						$chat_stats['images']++;
@@ -1052,7 +1077,12 @@ foreach ( $chat_index AS $chat_group_cnt => $chat_meta ) {
         '{{DATE_FROM}}'         => date( $options['date-format'], $chat_meta['first']['this_time'] + $timezone_offset ),
         '{{MESSAGE_FROM_BODY}}' => trim( htmlspecialchars( substr($chat_meta['first']['content'], 0, $index_preview_length ) ) ),
         '{{DATE_TO}}'           => date( $options['date-format'], $chat_meta['last']['this_time'] + $timezone_offset ),
-        '{{MESSAGE_TO_BODY}}'   => trim( htmlspecialchars( substr($chat_meta['last']['content'], 0, $index_preview_length ) ) )
+        '{{MESSAGE_TO_BODY}}'   => trim( htmlspecialchars( substr($chat_meta['last']['content'], 0, $index_preview_length ) ) ),
+
+        '{{STATS.IMAGES}}'      => $chat_meta['stats']['images'],
+		'{{STATS.AUDIO}}'       => $chat_meta['stats']['audio'],
+		'{{STATS.VIDEOS}}'      => $chat_meta['stats']['videos'],
+		'{{STATS.DOCUMENTS}}'   => $chat_meta['stats']['documents'],
     );
 
 	$toc_body .= strtr( $options['html-toc-loop-template'], $substitutionArray );
