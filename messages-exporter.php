@@ -613,18 +613,45 @@ while ( $row = $contacts->fetchArray() ) {
 
 						// If a file already exists where we want to save this attachment, add a suffix like -1, -2, -3, etc. until we get a unique filename.
 						// But don't copy the file if the destination file is the same as the one we're copying.
+                        // GH: Bugfix. Sadly there's a problem, because multiple identically named attachments (if an image got resized)
+                        //     can exist for the SAME timestamp (if those files were sent at the same time).
+                        //     So instead of renaming to a filename like "FullSizeRender-X.jpg" we now also use
+                        //     "2021-03-03_22-00-30-FullSizeRender-X.jpg" instead. By keeping the timestamp, the uniqueness
+                        //     will be applied on a next run. Before, a file would be renamed to FullSizeRender-X.jpg and then
+                        //     everytime the rebuild was executed, a new -X would be created.
+                        $performCopy = true;
 						while ( file_exists( $attachments_directory . $attachment_filename ) ) {
 							++$suffix;
 
-							$attachment_filename = $filename_base . '-' . $suffix;
+							if ( isset ( $GLOBALS['options']['safe-filenames'] ) ) {
+								$basename = get_safe_filename( $filename_base );
+								$attachment_filename = date( 'Y-m-d_H-i-s', strtotime( $message['timestamp'] ) ) . '-' . $basename . '-' . $suffix;
+							}
+							else {
+								$attachment_filename = date( 'Y-m-d H i s', strtotime( $message['timestamp'] ) ) . ' - ' . $filename_base . '-' . $suffix;
+							}
 
 							if ( $extension ) {
 								$attachment_filename .= '.' . $extension;
 							}
+
+							// Now perform the same identity check
+							if (
+								file_exists( $attachments_directory . $attachment_filename )
+									&& sha1_file( $attachments_directory . $attachment_filename ) == sha1_file( $file_to_copy )
+									&& filesize( $attachments_directory . $attachment_filename ) == filesize( $file_to_copy )
+							) {
+								// They're the same file. We've probably already run this script on the message that includes this file.
+								$performCopy = false;
+								// Abort the while statement; the file exists, but is identical.
+								break 1;
+							}
 						}
 
-						copy( $file_to_copy, $attachments_directory . $attachment_filename );
-						$summary['attachments']++;
+						if ($performCopy) {
+							copy( $file_to_copy, $attachments_directory . $attachment_filename );
+							$summary['attachments']++;
+						}
 					}
 
 					$html_embed = '';
