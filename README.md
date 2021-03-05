@@ -33,6 +33,8 @@ $ messages-exporter.php [-o|--output_directory output_directory]
                         Optionally, specify the last date that should be queried from the Messages database.
                         [-t|--timezone "America/Los_Angeles"]
                         Optionally, supply a timezone to use for any dates and times that are displayed. If none is supplied, times will be in UTC. For a list of valid timezones, see https://www.php.net/manual/en/timezones.php
+                        [--date-format "n/j/Y, g:i A"]
+                        Optionally, supply a output dateformat to use. If none is supplied, a date will be shown like "3/5/2021, 12:43 PM". For a list of valid timezones, see https://www.php.net/manual/en/datetime.format.php
 ```
 
 Caveats

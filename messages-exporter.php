@@ -26,6 +26,7 @@ $options = getopt(
         "date-start:",
         "date-stop:",
         "timezone:",
+        "date-format:",
     )
 );
 
@@ -62,6 +63,10 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
         . "      Optionally, supply a timezone to use for any dates and times that are displayed. If none is supplied, times will be in UTC. For a list of valid timezones, see https://www.php.net/manual/en/timezones.php\n"
 		. "\n"
 
+        . "    [--date-format \"n/j/Y, g:i A\"]\n"
+        . "      Optionally, supply a output dateformat to use. If none is supplied, a date will be shown like \"" . date("n/j/Y, g:i A", time()) . "\". For a list of valid timezones, see https://www.php.net/manual/en/datetime.format.php\n"
+		. "\n"
+
         . "";
 	echo "\n";
 	die();
@@ -96,6 +101,10 @@ if ( isset( $options['o'] ) ) {
 
 if ( isset( $options['d'] ) ) {
 	$options['d'] = preg_replace( '/^~/', $_SERVER['HOME'], $options['d'] );
+}
+
+if ( ! isset( $options['date-format'] ) ) {
+	$options['date-format'] = "n/j/Y, g:i A";
 }
 
 # Ensure a trailing slash on the output directory.
@@ -487,7 +496,7 @@ while ( $row = $contacts->fetchArray() ) {
 
 			file_put_contents(
 				$html_file,
-				"\t\t\t" . '<p class="timestamp" data-timestamp="' . $message['timestamp'] . '">' . date( "n/j/Y, g:i A", $message['this_time'] + $timezone_offset ) . '</p><br />' . "\n",
+				"\t\t\t" . '<p class="timestamp" data-timestamp="' . $message['timestamp'] . '">' . date( $options['date-format'], $message['this_time'] + $timezone_offset ) . '</p><br />' . "\n",
 				FILE_APPEND
 			);
 		}
@@ -580,14 +589,14 @@ while ( $row = $contacts->fetchArray() ) {
 
 			file_put_contents(
 				$html_file,
-				"\t\t\t" . '<p class="message" data-from="' . ( $message['is_from_me'] ? 'self' : $message['contact'] ) . '" data-timestamp="' . $message['timestamp'] . '" title="' . date( "n/j/Y, g:i A", $message['this_time'] + $timezone_offset ) . '">' . $html_embed . '</p>',
+				"\t\t\t" . '<p class="message" data-from="' . ( $message['is_from_me'] ? 'self' : $message['contact'] ) . '" data-timestamp="' . $message['timestamp'] . '" title="' . date( $options['date-format'], $message['this_time'] + $timezone_offset ) . '">' . $html_embed . '</p>',
 				FILE_APPEND
 			);
 		}
 		else {
 			file_put_contents(
 				$html_file,
-				"\t\t\t" . '<p class="message" data-from="' . ( $message['is_from_me'] ? 'self' : $message['contact'] ) . '" data-timestamp="' . $message['timestamp'] . '" title="' . date( "n/j/Y, g:i A", $message['this_time'] + $timezone_offset ) . '">' . nl2br( htmlspecialchars( trim( $message['content'] ) ) ) . '</p>',
+				"\t\t\t" . '<p class="message" data-from="' . ( $message['is_from_me'] ? 'self' : $message['contact'] ) . '" data-timestamp="' . $message['timestamp'] . '" title="' . date( $options['date-format'], $message['this_time'] + $timezone_offset ) . '">' . nl2br( htmlspecialchars( trim( $message['content'] ) ) ) . '</p>',
 				FILE_APPEND
 			);
 		}
