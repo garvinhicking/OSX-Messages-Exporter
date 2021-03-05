@@ -956,7 +956,7 @@ while ( $row = $contacts->fetchArray() ) {
 						if ( ! $is_skipped_attachment ) {
 							$html_embed = '<a class="imagelink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" target="_blank"><img loading="lazy" alt="Image" src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" /></a>';
                         } else {
-							$html_embed = '<span class="skipped-attachment">[' . $chat_title_for_filesystem . '/' . $attachment_filename . ']</span>' . "\n";
+							$html_embed = '<div class="skipped-attachment">[' . $chat_title_for_filesystem . '/' . $attachment_filename . ']</div>' . "\n";
                         }
 						$summary['images']++;
 						$chat_stats['images']++;
@@ -983,7 +983,7 @@ while ( $row = $contacts->fetchArray() ) {
 						}
 
 						if ( $is_skipped_attachment ) {
-							$html_embed .= '<span class="skipped-attachment">[' . $chat_title_for_filesystem . '/' . $attachment_filename . ']</span>' . "\n";
+							$html_embed .= '<div class="skipped-attachment">[' . $chat_title_for_filesystem . '/' . $attachment_filename . ']</div>' . "\n";
 						} else {
 						    $html_embed .= '<a class="attachmentlink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" target="_blank">' . htmlspecialchars( $attachment_filename ) . '</a>';
                         }
