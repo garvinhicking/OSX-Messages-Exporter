@@ -39,6 +39,10 @@ $ messages-exporter.php [-o|--output_directory output_directory]
                         If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)
                         [--html-head-template /path/to/template/file.html]
                         If set, the script will use the specified filename inside the HTML <head> section. Variable substitution with {{CHAT_TITLE}} is available. Use this to use custom CSS rules or inject i.e. JavaScript
+                        [--html-toc-template /path/to/template/file.html]
+                        If set, the script will use the specified filename inside the HTML <head> section for the TOC. Variable substitution is available: {{TOC}} for the TOC loop (see below)
+		                [--html-toc-loop-template /path/to/template/file.html]
+		                If set, the script will use the specified filename inside the HTML TOC. Variable substitution is available: {{FILE}}, {{TITLE}}, {{DATE_FROM}}, {{DATE_TO}}, {{MESSAGE_FROM_BODY}}, {{MESSAGE_TO_BODY}}.
                         [--safe-filenames]
                         If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.
                         [--contact-csv /path/to/contacts.csv]

@@ -32,6 +32,8 @@ $options = getopt(
         "safe-filenames",
         "contact-csv:",
         "progress",
+        "html-toc-template:",
+        "html-toc-loop-template:",
     )
 );
 
@@ -78,6 +80,14 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
 
         . "    [--html-head-template /path/to/template/file.html]\n"
         . "      If set, the script will use the specified filename inside the HTML <head> section. Variable substitution with {{CHAT_TITLE}} is available. Use this to use custom CSS rules or inject i.e. JavaScript\n"
+		. "\n"
+
+        . "    [--html-toc-template /path/to/template/file.html]\n"
+        . "      If set, the script will use the specified filename inside the HTML <head> section for the TOC. Variable substitution is available: {{TOC}} for the TOC loop (see below)\n"
+		. "\n"
+
+		. "    [--html-toc-loop-template /path/to/template/file.html]\n"
+		. "      If set, the script will use the specified filename inside the HTML TOC. Variable substitution is available: {{FILE}}, {{TITLE}}, {{DATE_FROM}}, {{DATE_TO}}, {{MESSAGE_FROM_BODY}}, {{MESSAGE_TO_BODY}} and {{STATS.xxx}}.\n"
 		. "\n"
 
         . "    [--safe-filenames]\n"
@@ -157,6 +167,68 @@ else {
 	$options['html-head-template'] = file_get_contents( $options['html-head-template'] );
 }
 
+if ( ! isset( $options['html-toc-template'] ) ) {
+	$options['html-toc-template'] = '<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+	    <title>TOC</title>
+	    
+		<style type="text/css">
+
+        body { font-family: "Helvetica Neue", sans-serif; font-size: 10pt;}
+        p { margin: 0; clear: both; }
+
+        ul.toc { list-style-type: none; margin: 0; padding: 0}
+        ul.toc li { border: 1px solid #e1e1e1; margin: 5px; padding: 1ex}
+        .date_from, .date_to { color: #8e8e93; font-variant: small-caps; font-weight: bold; font-size: 9pt; }
+        .message_from, .message_to { margin-left: 5px; }
+        .date_range { display: none }
+        ul.toc li:hover { background-color: #e1e1e1; }
+        .stats { color: #8e8e93; font-variant: small-caps; font-style: italic; font-size: 9pt; }
+
+		</style>
+	</head>
+	<body>
+	    <ul class="toc">
+	    {{TOC}}
+	    </ul>
+    </body>
+</html>';
+}
+else {
+	if ( ! file_exists( $options['html-toc-template'] ) ) {
+		die( "Error: The specified HTML TOC template file does not exist" );
+	}
+
+	$options['html-toc-template'] = file_get_contents( $options['html-toc-template'] );
+}
+
+if ( ! isset( $options['html-toc-loop-template'] ) ) {
+	$options['html-toc-loop-template'] = '
+        <li>
+            <div class="toc_link">
+                <a class="toc_link" href="{{FILE}}" target="chat">{{TITLE}}</a>
+            </div>
+            <div class="toc_meta">
+                <div class="date_from">{{DATE_FROM}}</div>
+                <div class="message_from">{{MESSAGE_FROM_BODY}}</div>
+                <div class="date_range">-</div>
+                <div class="date_to">{{DATE_TO}}</div>
+        		<div class="message_to">{{MESSAGE_TO_BODY}}</div>
+        		<div class="stats">{{STATS.IMAGES}} images, {{STATS.VIDEOS}} videos, {{STATS.AUDIO}} audio, {{STATS.DOCUMENTS}} files</div>
+            </div>
+        </li>
+	';
+}
+else {
+	if ( ! file_exists( $options['html-toc-loop-template'] ) ) {
+		die( "Error: The specified HTML TOC loop template file does not exist" );
+	}
+
+	$options['html-toc-loop-template'] = file_get_contents( $options['html-toc-loop-template'] );
+}
+
 $customContactLookup = array();
 if ( isset( $options['contact-csv'] ) ) {
 	if ( ! file_exists( $options['contact-csv'] ) ) {
@@ -183,6 +255,9 @@ if ( isset( $options['contact-csv'] ) ) {
 // Anything NON-ASCII will be changed to the safe_filename_replacement (you can use "" to get shorter filenames; multi-char replacements at your own risk
 $safe_filename_pattern = '@[^a-zA-Z0-9\.\-_]@';
 $safe_filename_replacement = '-';
+
+// Number of characters of messages shown in the TOC index
+$index_preview_length = 120;
 
 # Ensure a trailing slash on the output directory.
 $options['o'] = rtrim( $options['o'], '/' ) . '/';
@@ -819,12 +894,85 @@ while ( $row = $contacts->fetchArray() ) {
 			"<br />\n",
 			FILE_APPEND
 		);
+
+		if ( $first_message === null ) {
+			$first_message = $message;
+		}
+
+		$last_message = $message;
 	}
 
 	file_put_contents( $html_file, "\t</body>\n</html>", FILE_APPEND );
+
+	$chat_index[] = array(
+        'title'     => $chat_title,
+        'first'     => $first_message,
+        'last'      => $last_message,
+        'file'      => basename($html_file),
+        'stats'     => $chat_stats,
+        'latest'    => $last_message['this_time']
+    );
+}
+
+usort($chat_index, function($a, $b) {
+	if ($a['latest'] > $b['latest']) {
+	    return -1;
+    }
+
+	if ($a['latest'] < $b['latest']) {
+		return 1;
+	}
+
+	return 0;
+});
+
 if ( isset( $options['progress'] ) ) {
     echo "\nMessages created. Building TOC/index.\n";
 }
+
+$chat_index_file = get_html_file('index');
+// Not templated, don't think there is a need to.
+if (isset ( $chat_index[0] ) && isset ( $chat_index[0]['file'] ) ) {
+    file_put_contents(
+        $chat_index_file,
+        '<!doctype html>
+<html>
+	<head>
+	    <title>Index</title>
+	</head>
+	<!-- TODO:  How to make this work without frameset? Dunno. 
+	            This is useful here because the TOC can stay on screen and links are targeted.
+    -->
+	<frameset cols="33%,*" bordercolor="#000000">
+        <frame src="toc.html" name="toc" marginwidth="0" marginheight="0" scrolling="auto">
+        <frame src="' . $chat_index[0]['file'] . '" name="chat" marginwidth="0" marginheight="0" scrolling="auto">	
+    </frameset>
+</html>
+' );
+}
+
+$toc = $options['html-toc-template'];
+$toc_body = '';
+foreach ( $chat_index AS $chat_group_cnt => $chat_meta ) {
+
+	$substitutionArray = array(
+		'{{FILE}}'              => $chat_meta['file'],
+		'{{TITLE}}'             => htmlspecialchars($chat_meta['title']),
+        '{{DATE_FROM}}'         => date( $options['date-format'], $chat_meta['first']['this_time'] + $timezone_offset ),
+        '{{MESSAGE_FROM_BODY}}' => trim( htmlspecialchars( substr($chat_meta['first']['content'], 0, $index_preview_length ) ) ),
+        '{{DATE_TO}}'           => date( $options['date-format'], $chat_meta['last']['this_time'] + $timezone_offset ),
+        '{{MESSAGE_TO_BODY}}'   => trim( htmlspecialchars( substr($chat_meta['last']['content'], 0, $index_preview_length ) ) ),
+
+        '{{STATS.IMAGES}}'      => $chat_meta['stats']['images'],
+		'{{STATS.AUDIO}}'       => $chat_meta['stats']['audio'],
+		'{{STATS.VIDEOS}}'      => $chat_meta['stats']['videos'],
+		'{{STATS.DOCUMENTS}}'   => $chat_meta['stats']['documents'],
+    );
+
+	$toc_body .= strtr( $options['html-toc-loop-template'], $substitutionArray );
+}
+$toc = str_replace('{{TOC}}', $toc_body, $toc);
+file_put_contents( get_html_file( 'toc' ), $toc );
 
 if ( isset( $options['summary'] ) ) {
 	echo "\nBuild finished. Summary:\n";
