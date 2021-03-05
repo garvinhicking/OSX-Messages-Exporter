@@ -27,6 +27,7 @@ $options = getopt(
         "date-stop:",
         "timezone:",
         "date-format:",
+        "summary",
     )
 );
 
@@ -65,6 +66,10 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
 
         . "    [--date-format \"n/j/Y, g:i A\"]\n"
         . "      Optionally, supply a output dateformat to use. If none is supplied, a date will be shown like \"" . date("n/j/Y, g:i A", time()) . "\". For a list of valid timezones, see https://www.php.net/manual/en/datetime.format.php\n"
+		. "\n"
+
+        . "    [--summary]\n"
+        . "      If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)\n"
 		. "\n"
 
         . "";
@@ -133,6 +138,33 @@ if ( ! file_exists( $options['o'] ) ) {
 	mkdir( $options['o'] );
 }
 
+$summary = array(
+	'messages'      => 0,
+	'chats'         => 0,
+	'attachments'   => 0,
+	'images'		=> 0,
+	'videos' 		=> 0,
+	'audio'			=> 0,
+	'documents'     => 0,
+	'warnings'      => array(
+		'groupChats'                => array(),
+		'emptyAttachmentFilenames'  => array(),
+		'unknownDates'              => 0,
+		'unknownMessages'           => 0,
+		'filesNotFound'             => 0
+	),
+	'notices'      	=> array(
+		'URLPreviews'               => 0
+	),
+	'start'         => microtime(true),
+	'skipped'   => array(
+		'videos'    => 0,
+		'images'    => 0,
+		'audio'     => 0,
+		'documents' => 0,
+        'total'     => 0
+	)
+);
 $database_file = $options['o'] . 'messages-exporter.db';
 
 if ( ! isset( $options['r'] ) ) {
@@ -198,6 +230,10 @@ if ( ! isset( $options['r'] ) ) {
 		die( "Error: The file " . $chat_db_path . " does not exist.\n" );
 	}
 
+	if ( isset( $options['summary'] ) ) {
+		echo "Using database: " . $chat_db_path . "\n";
+	}
+
 	$db = new SQLite3( $chat_db_path, SQLITE3_OPEN_READONLY );
 	$chats = $db->query( "SELECT * FROM chat" );
 
@@ -256,6 +292,7 @@ if ( ! isset( $options['r'] ) ) {
 
 					if ( strpos( $stored_message['chat_title'], ', ' ) !== false ) {
 						// Group chats are tricky. @todo
+						$summary['warnings']['groupChats'][] = $stored_message['chat_title'];
 						continue;
 					}
 
@@ -365,6 +402,7 @@ if ( ! isset( $options['r'] ) ) {
 
 			if ( isset( $message['balloon_bundle_id'] ) && 'com.apple.messages.URLBalloonProvider' === $message['balloon_bundle_id'] ) {
 				// The attachment would just be a URL preview.
+				$summary['notices']['URLPreviews']++;
 				continue;
 			}
 
@@ -407,6 +445,7 @@ if ( ! isset( $options['r'] ) ) {
 						// Could be something like an Apple Pay request.
 						// $attachmentResult['attribution_info'] has a hint: bplist00?TnameYbundle-idiApple?Pay_vcom.apple.messages.MSMessageExtensionBalloonPlugin:0000000000:com.apple.PassbookUIService.PeerPaymentMessage...
 						// @todo
+						$summary['warnings']['emptyAttachmentFilenames'][] = '#' . $attachmentResult['ROWID'] . ': ' . $attachmentResult['attribution_info'];
 					}
 
 					if ( ! empty( $options['d'] ) ) {
@@ -439,6 +478,10 @@ if ( ! isset( $options['r'] ) ) {
 
 $contacts = $temp_db->query( "SELECT chat_title FROM messages GROUP BY chat_title ORDER BY chat_title ASC" );
 
+if ( isset( $options['summary'] ) ) {
+	echo "Using HTML output directory: " . $options['o'] . "\n";
+}
+
 while ( $row = $contacts->fetchArray() ) {
 	$chat_title = $row['chat_title'];
 
@@ -455,6 +498,8 @@ while ( $row = $contacts->fetchArray() ) {
 	$messages_statement = $temp_db->prepare( "SELECT * FROM messages WHERE chat_title=:chat_title ORDER BY timestamp ASC" );
 	$messages_statement->bindValue( ':chat_title', $chat_title, SQLITE3_TEXT );
 	$messages = $messages_statement->execute();
+
+	$summary['chats']++;
 
 	file_put_contents(
 		$html_file,
@@ -481,7 +526,16 @@ while ( $row = $contacts->fetchArray() ) {
 	$last_time = 0;
 	$last_participant = null;
 
+	$first_message = $last_message = null;
+	$chat_stats = array(
+	    'videos'    => 0,
+        'images'    => 0,
+        'audio'     => 0,
+        'documents' => 0,
+    );
+
 	while ( $message = $messages->fetchArray() ) {
+		$summary['messages']++;
 		$message['this_time'] = strtotime( $message['timestamp'] );
 
 		if ( $message['this_time'] < 0 ) {
@@ -489,6 +543,7 @@ while ( $row = $contacts->fetchArray() ) {
 			// timestamps were all from the year -1413. There's no way to fix it without re-importing the messages. Sorry.
 			$message['this_time'] = 0;
 			$message['timestamp'] = "Unknown Date";
+			$summary['warnings']['unknownDates']++;
 		}
 
 		if ( $message['this_time'] - $last_time > ( 60 * 60 ) ) {
@@ -520,6 +575,7 @@ while ( $row = $contacts->fetchArray() ) {
 
 			if ( empty( $message['content'] ) ) {
 				$html_embed = '[Unknown Message]';
+				$summary['warnings']['unknownMessages']++;
 			}
 			else {
 				// Give the attachment filename a date-based prefix to avoid filename collisions if this backup is ever migrated to another machine.
@@ -530,6 +586,7 @@ while ( $row = $contacts->fetchArray() ) {
 				// If the file is no longer available and we didn't previously save it, show "File Not Found".
 				if ( ! file_exists( $file_to_copy ) && ! file_exists( $attachments_directory . $attachment_filename ) ) {
 					$html_embed = '[File Not Found: ' . $attachment_filename . ']';
+					$summary['warnings']['filesNotFound']++;
 				}
 				else {
 					if ( strpos( $message['content'], '.' ) !== false ) {
@@ -567,19 +624,31 @@ while ( $row = $contacts->fetchArray() ) {
 						}
 
 						copy( $file_to_copy, $attachments_directory . $attachment_filename );
+						$summary['attachments']++;
 					}
 
 					$html_embed = '';
 
 					if ( strpos( $message['attachment_mime_type'], 'image' ) === 0 ) {
 						$html_embed = '<img src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" />';
+						$summary['images']++;
+						$chat_stats['images']++;
 					}
 					else {
 						if ( strpos( $message['attachment_mime_type'], 'video' ) === 0 ) {
 							$html_embed = '<video controls><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></video><br />';
+							$summary['videos']++;
+							$chat_stats['videos']++;
 						}
 						else if ( strpos( $message['attachment_mime_type'], 'audio' ) === 0 ) {
 							$html_embed = '<audio controls><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></audio><br />';
+
+							$summary['audio']++;
+							$chat_stats['audio']++;
+						}
+						else {
+							$summary['documents']++;
+							$chat_stats['documents']++;
 						}
 
 						$html_embed .= '<a href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '">' . htmlspecialchars( $attachment_filename ) . '</a>';
@@ -609,6 +678,48 @@ while ( $row = $contacts->fetchArray() ) {
 	}
 
 	file_put_contents( $html_file, "\t</body>\n</html>", FILE_APPEND );
+if ( isset( $options['summary'] ) ) {
+	echo "\nBuild finished. Summary:\n";
+	echo "========================\n";
+	echo "Number of messages: " . $summary['messages'] . "\n";
+	echo "Number of chats: " . $summary['chats'] . "\n";
+	echo "Number of attachments: " . $summary['attachments'] . " copied (total: " . $summary['images'] . " images, " . $summary['videos'] . " videos, " . $summary['audio'] . " audios, " . $summary['documents'] . " other)\n";
+	echo "Number of skipped attachments: " . $summary['skipped']['total'] . " (total: " . $summary['skipped']['images'] . " images, " . $summary['skipped']['videos'] . " videos, " . $summary['skipped']['audio'] . " audios, " . $summary['skipped']['documents'] . " other)\n";
+	echo "\n";
+	echo "Notices:\n";
+	echo "========\n";
+	echo "Number of skipped URLPreview messages: " . $summary['notices']['URLPreviews'] . "\n";
+	echo "\n";
+	echo "Warnings:\n";
+	echo "=========\n";
+	if ( count( $summary['warnings']['groupChats'] ) > 0) {
+		echo count( $summary['warnings']['groupChats'] ) . " GroupChats with multiple recipients diverted:\n";
+		foreach( $summary['warnings']['groupChats'] AS $groupchatNumber => $groupChat ) {
+			echo " * " . $groupChat . "\n";
+		}
+	}
+
+	if ( count( $summary['warnings']['emptyAttachmentFilenames'] ) > 0) {
+		echo count( $summary['warnings']['emptyAttachmentFilenames'] ) . " missing attachment filenames:\n";
+		foreach( $summary['warnings']['emptyAttachmentFilenames'] AS $attachmentNumber => $attachmentFile ) {
+			echo " * " . $attachmentFile . "\n";
+		}
+	}
+
+	if ( $summary['warnings']['unknownDates'] > 0 ) {
+		echo "Unknown Dates: " . $summary['warnings']['unknownDates'] . "\n";
+	}
+
+	if ( $summary['warnings']['unknownMessages'] > 0 ) {
+		echo "Unknown/Empty Messages: " . $summary['warnings']['unknownMessages'] . "\n";
+	}
+
+	if ( $summary['warnings']['filesNotFound'] > 0 ) {
+		echo "Files not found: " . $summary['warnings']['filesNotFound'] . "\n";
+	}
+
+	$timeTaken = microtime(true) - $summary['start'];
+	echo "Finished in " . $timeTaken . " seconds.\n";
 }
 
 function get_contact_nicename( $contact_notnice_name ) {
