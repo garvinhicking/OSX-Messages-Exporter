@@ -37,6 +37,8 @@ $ messages-exporter.php [-o|--output_directory output_directory]
                         Optionally, supply a output dateformat to use. If none is supplied, a date will be shown like "3/5/2021, 12:43 PM". For a list of valid timezones, see https://www.php.net/manual/en/datetime.format.php
                         [--summary]
                         If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)
+                        [--html-head-template /path/to/template/file.html]
+                        If set, the script will use the specified filename inside the HTML <head> section. Variable substitution with {{CHAT_TITLE}} is available. Use this to use custom CSS rules or inject i.e. JavaScript
                         [--safe-filenames]
                         If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.
                         [--contact-csv /path/to/contacts.csv]

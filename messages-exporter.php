@@ -28,6 +28,7 @@ $options = getopt(
         "timezone:",
         "date-format:",
         "summary",
+        "html-head-template:",
         "safe-filenames",
         "contact-csv:",
         "progress",
@@ -73,6 +74,10 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
 
         . "    [--summary]\n"
         . "      If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)\n"
+		. "\n"
+
+        . "    [--html-head-template /path/to/template/file.html]\n"
+        . "      If set, the script will use the specified filename inside the HTML <head> section. Variable substitution with {{CHAT_TITLE}} is available. Use this to use custom CSS rules or inject i.e. JavaScript\n"
 		. "\n"
 
         . "    [--safe-filenames]\n"
@@ -125,6 +130,31 @@ if ( isset( $options['d'] ) ) {
 
 if ( ! isset( $options['date-format'] ) ) {
 	$options['date-format'] = "n/j/Y, g:i A";
+}
+
+if ( ! isset( $options['html-head-template'] ) ) {
+	$options['html-head-template'] = '
+		<meta charset="UTF-8">
+		<title>Conversation: {{CHAT_TITLE}}</title>
+		<style type="text/css">
+
+		body { font-family: "Helvetica Neue", sans-serif; font-size: 10pt; margin: 5px }
+		p { margin: 0; clear: both; }
+		.timestamp { text-align: center; color: #8e8e93; font-variant: small-caps; font-weight: bold; font-size: 9pt; }
+		.byline { text-align: left; color: #8e8e93; font-size: 9pt; padding-left: 1ex; padding-top: 1ex; margin-bottom: 2px; }
+		img { max-width: 100%; }
+		.message { text-align: left; color: black; border-radius: 8px; background-color: #e1e1e1; padding: 6px; display: inline-block; max-width: 75%; margin-bottom: 5px; float: left; }
+		.message[data-from="self"] { text-align: right; background-color: #007aff; color: white; float: right;}
+
+		</style>
+	';
+}
+else {
+	if ( ! file_exists( $options['html-head-template'] ) ) {
+		die( "Error: The specified HTML head template file does not exist" );
+	}
+
+	$options['html-head-template'] = file_get_contents( $options['html-head-template'] );
 }
 
 $customContactLookup = array();
@@ -573,26 +603,27 @@ while ( $row = $contacts->fetchArray() ) {
 	$messages_statement->bindValue( ':chat_title', $chat_title, SQLITE3_TEXT );
 	$messages = $messages_statement->execute();
 
+	$htmlHeadTemplate = $options['html-head-template'];
+
 	$summary['chats']++;
+
+	// Variable substitution. Supports future enhancements, for now only a single variable
+	$htmlHeadTemplate = str_replace(
+		array(
+			'{{CHAT_TITLE}}',
+		),
+		array(
+			$chat_title
+		),
+		$htmlHeadTemplate
+	);
 
 	file_put_contents(
 		$html_file,
 		'<!doctype html>
 <html>
 	<head>
-		<meta charset="UTF-8">
-		<title>Conversation: ' . $chat_title . '</title>
-		<style type="text/css">
-
-		body { font-family: "Helvetica Neue", sans-serif; font-size: 10pt; }
-		p { margin: 0; clear: both; }
-		.timestamp { text-align: center; color: #8e8e93; font-variant: small-caps; font-weight: bold; font-size: 9pt; }
-		.byline { text-align: left; color: #8e8e93; font-size: 9pt; padding-left: 1ex; padding-top: 1ex; margin-bottom: 2px; }
-		img { max-width: 100%; }
-		.message { text-align: left; color: black; border-radius: 8px; background-color: #e1e1e1; padding: 6px; display: inline-block; max-width: 75%; margin-bottom: 5px; float: left; }
-		.message[data-from="self"] { text-align: right; background-color: #007aff; color: white; float: right;}
-
-		</style>
+		' . $htmlHeadTemplate . '
 	</head>
 	<body>
 ' );
