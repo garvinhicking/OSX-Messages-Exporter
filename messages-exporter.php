@@ -29,6 +29,7 @@ $options = getopt(
         "date-format:",
         "summary",
         "safe-filenames",
+        "contact-csv:",
         "progress",
     )
 );
@@ -78,6 +79,10 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
         . "      If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.\n"
 		. "\n"
 
+        . "    [--contact-csv /path/to/contacts.csv]\n"
+        . "      By default, contacts are matched by several lookup to system files, however a lookup may fail. In this case you can provide a CSV file with two columns \"Number,Name\" (Number can be an eMail address, too) that resolves a iMessage ID to a readable name. The CSV will take precedence over other address books, so you can use it to even override specific contact names that exist. Ensure the CSV file matches your local charset, use comma as separator, UNIX newlines and no enclosing quotes.\n"
+		. "\n"
+
         . "    [--progress]\n"
         . "      When set, you will get a (simple) progress report while compiling data and output.\n"
 		. "\n"
@@ -122,6 +127,28 @@ if ( ! isset( $options['date-format'] ) ) {
 	$options['date-format'] = "n/j/Y, g:i A";
 }
 
+$customContactLookup = array();
+if ( isset( $options['contact-csv'] ) ) {
+	if ( ! file_exists( $options['contact-csv'] ) ) {
+		die( "Error: The specified CSV file does not exist" );
+	}
+	$fp = fopen( $options['contact-csv'], 'rb');
+	ini_set("auto_detect_line_endings", true);
+	while ($line = fgetcsv( $fp, 0, ',' ) ) {
+		if ( ! isset( $line[1] ) ) {
+			die( "Error: The CSV format is invalid. Please check using comma as separator.\n" );
+		}
+		$customContactLookup[$line[0]] = $line[1];
+	}
+
+	if ( count( $customContactLookup ) == 0 ) {
+		die( "Error: The specified CSV file does not seem to contain any data. Please check newlines and proper format.\n" );
+	}
+
+	if ( isset( $options['summary'] ) ) {
+		echo count($customContactLookup) . " CSV contacts imported.\n";
+	}
+}
 // Regular expression that may be used (when enabled) to transform directories and filenames to ASCII names.
 // Anything NON-ASCII will be changed to the safe_filename_replacement (you can use "" to get shorter filenames; multi-char replacements at your own risk
 $safe_filename_pattern = '@[^a-zA-Z0-9\.\-_]@';
@@ -821,6 +848,10 @@ function get_contact_nicename( $contact_notnice_name ) {
 
 	if ( isset( $contact_nicename_map[ $contact_notnice_name ] ) ) {
 		return $contact_nicename_map[ $contact_notnice_name ];
+	}
+
+	if ( isset( $GLOBALS['customContactLookup'][$contact_notnice_name] ) ) {
+		return $GLOBALS['customContactLookup'][$contact_notnice_name];
 	}
 
 	$contact_nicename_map[ $contact_notnice_name ] = $contact_notnice_name;

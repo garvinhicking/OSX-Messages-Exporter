@@ -39,6 +39,8 @@ $ messages-exporter.php [-o|--output_directory output_directory]
                         If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)
                         [--safe-filenames]
                         If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.
+                        [--contact-csv /path/to/contacts.csv]
+                        By default, contacts are matched by several lookup to system files, however a lookup may fail. In this case you can provide a CSV file with two columns \"Number,Name\" (Number can be an eMail address, too) that resolves a iMessage ID to a readable name. The CSV will take precedence over other address books, so you can use it to even override specific contact names that exist. Ensure the CSV file matches your local charset, use comma as separator, UNIX newlines and no enclosing quotes.
                         [--progress]\n
                         When set, you will get a (simple) progress report while compiling data and output.
 ```
