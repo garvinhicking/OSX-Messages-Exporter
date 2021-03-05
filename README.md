@@ -35,6 +35,8 @@ $ messages-exporter.php [-o|--output_directory output_directory]
                         Optionally, supply a timezone to use for any dates and times that are displayed. If none is supplied, times will be in UTC. For a list of valid timezones, see https://www.php.net/manual/en/timezones.php
                         [--date-format "n/j/Y, g:i A"]
                         Optionally, supply a output dateformat to use. If none is supplied, a date will be shown like "3/5/2021, 12:43 PM". For a list of valid timezones, see https://www.php.net/manual/en/datetime.format.php
+                        [--no-video-preload]
+                        If set, the HTML markup will include a 'preload="none"' attribute so on larger chats not all video files will be preloaded in a browser
                         [--summary]
                         If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)
                         [--html-head-template /path/to/template/file.html]

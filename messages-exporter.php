@@ -27,6 +27,7 @@ $options = getopt(
         "date-stop:",
         "timezone:",
         "date-format:",
+        "no-video-preload",
         "summary",
         "html-head-template:",
         "safe-filenames",
@@ -73,6 +74,10 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
 
         . "    [--date-format \"n/j/Y, g:i A\"]\n"
         . "      Optionally, supply a output dateformat to use. If none is supplied, a date will be shown like \"" . date("n/j/Y, g:i A", time()) . "\". For a list of valid timezones, see https://www.php.net/manual/en/datetime.format.php\n"
+		. "\n"
+
+        . "    [--no-video-preload]\n"
+        . "      If set, the HTML markup will include a 'preload=\"none\"' attribute so on larger chats not all video files will be preloaded in a browser\n"
 		. "\n"
 
         . "    [--summary]\n"
