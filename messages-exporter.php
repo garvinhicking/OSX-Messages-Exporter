@@ -167,7 +167,7 @@ if ( ! isset( $options['html-head-template'] ) ) {
 		p { margin: 0; clear: both; }
 		.timestamp { text-align: center; color: #8e8e93; font-variant: small-caps; font-weight: bold; font-size: 9pt; }
 		.byline { text-align: left; color: #8e8e93; font-size: 9pt; padding-left: 1ex; padding-top: 1ex; margin-bottom: 2px; }
-		img { max-width: 100%; }
+		img { max-width: 100%; max-height: 50vh}
 		.message { text-align: left; color: black; border-radius: 8px; background-color: #e1e1e1; padding: 6px; display: inline-block; max-width: 75%; margin-bottom: 5px; float: left; }
 		.message[data-from="self"] { text-align: right; background-color: #007aff; color: white; float: right;}
 		.skipped-attachment { background-color: red; padding: 5px }
