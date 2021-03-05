@@ -31,6 +31,7 @@ $options = getopt(
         "html-head-template:",
         "safe-filenames",
         "contact-csv:",
+        "skip-attachments:",
         "progress",
         "html-toc-template:",
         "html-toc-loop-template:",
@@ -98,6 +99,10 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
         . "      By default, contacts are matched by several lookup to system files, however a lookup may fail. In this case you can provide a CSV file with two columns \"Number,Name\" (Number can be an eMail address, too) that resolves a iMessage ID to a readable name. The CSV will take precedence over other address books, so you can use it to even override specific contact names that exist. Ensure the CSV file matches your local charset, use comma as separator, UNIX newlines and no enclosing quotes.\n"
 		. "\n"
 
+        . "    [--skip-attachments \"all|a,i,v,d\"]\n"
+        . "      When set to \"all\", all attachments will be replaced by a simple placeholder. Can be used if you just care about plaintexts. If no parameters to this is specified, all attachments are skipped. Else you can specify a comma-separated list of characters to each attachment type to skip (a=audio, v=video, i=image, d=document)\n"
+		. "\n"
+
         . "    [--progress]\n"
         . "      When set, you will get a (simple) progress report while compiling data and output.\n"
 		. "\n"
@@ -155,6 +160,7 @@ if ( ! isset( $options['html-head-template'] ) ) {
 		img { max-width: 100%; }
 		.message { text-align: left; color: black; border-radius: 8px; background-color: #e1e1e1; padding: 6px; display: inline-block; max-width: 75%; margin-bottom: 5px; float: left; }
 		.message[data-from="self"] { text-align: right; background-color: #007aff; color: white; float: right;}
+		.skipped-attachment { background-color: red; padding: 5px }
 
 		</style>
 	';
@@ -251,6 +257,62 @@ if ( isset( $options['contact-csv'] ) ) {
 		echo count($customContactLookup) . " CSV contacts imported.\n";
 	}
 }
+
+$skip_attachments = array(
+    'audio'     => false,
+    'images'    => false,
+    'videos'    => false,
+    'documents' => false
+);
+
+if ( isset ( $options['skip-attachments'] ) ) {
+    if ( strlen( $options['skip-attachments'] ) === 0 || $options['skip-attachments'] === 'all' ) {
+        $skip_attachments['audio'] = true;
+		$skip_attachments['images'] = true;
+		$skip_attachments['videos'] = true;
+		$skip_attachments['documents'] = true;
+    } else {
+        $parts = explode(',', $options['skip-attachments']);
+        foreach( $parts AS $part ) {
+            $part = trim( $part );
+            switch( strtolower( $part )) {
+                case 'a':
+					$skip_attachments['audio'] = true;
+					break;
+
+				case 'i':
+					$skip_attachments['images'] = true;
+					break;
+
+				case 'v':
+					$skip_attachments['videos'] = true;
+					break;
+
+				case 'd':
+					$skip_attachments['documents'] = true;
+					break;
+
+            }
+        }
+    }
+
+    if ( isset ( $options['summary'] ) ) {
+        echo "Skipping: \n";
+        if ( $skip_attachments['audio'] ) {
+            echo "  * Audio attachments\n";
+        }
+		if ( $skip_attachments['videos'] ) {
+			echo "  * Video attachments\n";
+		}
+		if ( $skip_attachments['images'] ) {
+			echo "  * Images\n";
+		}
+		if ( $skip_attachments['documents'] ) {
+			echo "  * Files / Documents\n";
+		}
+    }
+}
+
 // Regular expression that may be used (when enabled) to transform directories and filenames to ASCII names.
 // Anything NON-ASCII will be changed to the safe_filename_replacement (you can use "" to get shorter filenames; multi-char replacements at your own risk
 $safe_filename_pattern = '@[^a-zA-Z0-9\.\-_]@';
@@ -789,6 +851,8 @@ while ( $row = $contacts->fetchArray() ) {
 						$filename_base = basename( $message['content'] );
 					}
 
+					$is_skipped_attachment = false;
+
 					if (
 					       // We previously saved the attachment but it's no longer available.
 					       ( ! file_exists( $file_to_copy ) && file_exists( $attachments_directory . $attachment_filename ) )
@@ -841,26 +905,53 @@ while ( $row = $contacts->fetchArray() ) {
 						}
 
 						if ($performCopy) {
-							copy( $file_to_copy, $attachments_directory . $attachment_filename );
+							if ( $skip_attachments['images'] && strpos( $message['attachment_mime_type'], 'image' ) === 0 ) {
+								$summary['skipped']['images']++;
+								$summary['skipped']['total']++;
+								$is_skipped_attachment = true;
+                            } else if ( $skip_attachments['videos'] && strpos( $message['attachment_mime_type'], 'video' ) === 0 ) {
+								$summary['skipped']['videos']++;
+								$summary['skipped']['total']++;
+								$is_skipped_attachment = true;
+                            } else if ( $skip_attachments['audio'] && strpos( $message['attachment_mime_type'], 'audio' ) === 0 ) {
+								$summary['skipped']['audio']++;
+								$summary['skipped']['total']++;
+								$is_skipped_attachment = true;
+							} else if ( $skip_attachments['documents'] ) {
+								$summary['skipped']['documents']++;
+								$summary['skipped']['total']++;
+								$is_skipped_attachment = true;
+                            } else {
+                                copy( $file_to_copy, $attachments_directory . $attachment_filename );
+                            }
+
 							$summary['attachments']++;
 						}
 					}
 
 					$html_embed = '';
 
-					if ( strpos( $message['attachment_mime_type'], 'image' ) === 0 ) {
-						$html_embed = '<img src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" />';
+                    if ( strpos( $message['attachment_mime_type'], 'image' ) === 0 ) {
+						if ( ! $is_skipped_attachment ) {
+							$html_embed = '<a class="imagelink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" target="_blank"><img loading="lazy" alt="Image" src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" /></a>';
+                        } else {
+							$html_embed = '<div class="skipped-attachment">[' . $chat_title_for_filesystem . '/' . $attachment_filename . ']</div>' . "\n";
+                        }
 						$summary['images']++;
 						$chat_stats['images']++;
 					}
 					else {
 						if ( strpos( $message['attachment_mime_type'], 'video' ) === 0 ) {
-							$html_embed = '<video controls><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></video><br />';
+							if ( ! $is_skipped_attachment ) {
+    							$html_embed = '<video controls' . ( isset( $options['no-video-preload'] ) ? ' preload="none"' : '') . '><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></video><br />';
+							}
 							$summary['videos']++;
 							$chat_stats['videos']++;
 						}
 						else if ( strpos( $message['attachment_mime_type'], 'audio' ) === 0 ) {
-							$html_embed = '<audio controls><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></audio><br />';
+							if ( ! $is_skipped_attachment ) {
+    							$html_embed = '<audio controls' . ( isset( $options['no-video-preload'] ) ? ' preload="none"' : '') . '><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></audio><br />';
+                            }
 
 							$summary['audio']++;
 							$chat_stats['audio']++;
@@ -870,7 +961,11 @@ while ( $row = $contacts->fetchArray() ) {
 							$chat_stats['documents']++;
 						}
 
-						$html_embed .= '<a href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '">' . htmlspecialchars( $attachment_filename ) . '</a>';
+						if ( $is_skipped_attachment ) {
+							$html_embed .= '<div class="skipped-attachment">[' . $chat_title_for_filesystem . '/' . $attachment_filename . ']</div>' . "\n";
+						} else {
+						    $html_embed .= '<a class="attachmentlink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" target="_blank">' . htmlspecialchars( $attachment_filename ) . '</a>';
+                        }
 					}
 				}
 			}

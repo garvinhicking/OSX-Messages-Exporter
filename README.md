@@ -47,6 +47,8 @@ $ messages-exporter.php [-o|--output_directory output_directory]
                         If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.
                         [--contact-csv /path/to/contacts.csv]
                         By default, contacts are matched by several lookup to system files, however a lookup may fail. In this case you can provide a CSV file with two columns \"Number,Name\" (Number can be an eMail address, too) that resolves a iMessage ID to a readable name. The CSV will take precedence over other address books, so you can use it to even override specific contact names that exist. Ensure the CSV file matches your local charset, use comma as separator, UNIX newlines and no enclosing quotes.
+                        [--skip-attachments "all|a,i,v,d"]
+                        When set to "all", all attachments will be replaced by a simple placeholder. Can be used if you just care about plaintexts. If no parameters to this is specified, all attachments are skipped. Else you can specify a comma-separated list of characters to each attachment type to skip (a=audio, v=video, i=image, d=document)
                         [--progress]\n
                         When set, you will get a (simple) progress report while compiling data and output.
 ```
