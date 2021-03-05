@@ -473,26 +473,26 @@ while ( $row = $contacts->fetchArray() ) {
 	$last_participant = null;
 
 	while ( $message = $messages->fetchArray() ) {
-		$this_time = strtotime( $message['timestamp'] );
+		$message['this_time'] = strtotime( $message['timestamp'] );
 
-		if ( $this_time < 0 ) {
+		if ( $message['this_time'] < 0 ) {
 			// There was a bug present from when Apple started storing timestamps as nanoseconds instead of seconds, so the stored
 			// timestamps were all from the year -1413. There's no way to fix it without re-importing the messages. Sorry.
-			$this_time = 0;
+			$message['this_time'] = 0;
 			$message['timestamp'] = "Unknown Date";
 		}
 
-		if ( $this_time - $last_time > ( 60 * 60 ) ) {
+		if ( $message['this_time'] - $last_time > ( 60 * 60 ) ) {
 			$last_participant = null;
 
 			file_put_contents(
 				$html_file,
-				"\t\t\t" . '<p class="timestamp" data-timestamp="' . $message['timestamp'] . '">' . date( "n/j/Y, g:i A", $this_time + $timezone_offset ) . '</p><br />' . "\n",
+				"\t\t\t" . '<p class="timestamp" data-timestamp="' . $message['timestamp'] . '">' . date( "n/j/Y, g:i A", $message['this_time'] + $timezone_offset ) . '</p><br />' . "\n",
 				FILE_APPEND
 			);
 		}
 
-		$last_time = $this_time;
+		$last_time = $message['this_time'];
 
 		if ( $conversation_participant_count > 2 && ! $message['is_from_me'] && $message['contact'] != $last_participant ) {
 			$last_participant = $message['contact'];
@@ -580,14 +580,14 @@ while ( $row = $contacts->fetchArray() ) {
 
 			file_put_contents(
 				$html_file,
-				"\t\t\t" . '<p class="message" data-from="' . ( $message['is_from_me'] ? 'self' : $message['contact'] ) . '" data-timestamp="' . $message['timestamp'] . '" title="' . date( "n/j/Y, g:i A", $this_time + $timezone_offset ) . '">' . $html_embed . '</p>',
+				"\t\t\t" . '<p class="message" data-from="' . ( $message['is_from_me'] ? 'self' : $message['contact'] ) . '" data-timestamp="' . $message['timestamp'] . '" title="' . date( "n/j/Y, g:i A", $message['this_time'] + $timezone_offset ) . '">' . $html_embed . '</p>',
 				FILE_APPEND
 			);
 		}
 		else {
 			file_put_contents(
 				$html_file,
-				"\t\t\t" . '<p class="message" data-from="' . ( $message['is_from_me'] ? 'self' : $message['contact'] ) . '" data-timestamp="' . $message['timestamp'] . '" title="' . date( "n/j/Y, g:i A", $this_time + $timezone_offset ) . '">' . nl2br( htmlspecialchars( trim( $message['content'] ) ) ) . '</p>',
+				"\t\t\t" . '<p class="message" data-from="' . ( $message['is_from_me'] ? 'self' : $message['contact'] ) . '" data-timestamp="' . $message['timestamp'] . '" title="' . date( "n/j/Y, g:i A", $message['this_time'] + $timezone_offset ) . '">' . nl2br( htmlspecialchars( trim( $message['content'] ) ) ) . '</p>',
 				FILE_APPEND
 			);
 		}
