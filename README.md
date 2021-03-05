@@ -53,6 +53,8 @@ $ messages-exporter.php [-o|--output_directory output_directory]
                         When set to "all", all attachments will be replaced by a simple placeholder. Can be used if you just care about plaintexts. If no parameters to this is specified, all attachments are skipped. Else you can specify a comma-separated list of characters to each attachment type to skip (a=audio, v=video, i=image, d=document)
                         [--progress]\n
                         When set, you will get a (simple) progress report while compiling data and output.
+                        [--max-messages XX]
+		                Debugging: When set, you can specify the maximum of messages to write for each chat; allows easier debugging.
 ```
 
 Caveats

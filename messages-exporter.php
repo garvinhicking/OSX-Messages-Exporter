@@ -36,6 +36,7 @@ $options = getopt(
         "progress",
         "html-toc-template:",
         "html-toc-loop-template:",
+        "max-messages:"
     )
 );
 
@@ -110,6 +111,10 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
 
         . "    [--progress]\n"
         . "      When set, you will get a (simple) progress report while compiling data and output.\n"
+		. "\n"
+
+		. "    [--max-messages XX]\n"
+		. "      Debugging: When set, you can specify the maximum of messages to write for each chat; allows easier debugging.\n"
 		. "\n"
 
         . "";
@@ -434,6 +439,11 @@ $version_statement->execute();
 
 $updated_contacts_memo = array();
 
+
+if ( isset( $options['summary'] ) && isset ( $options['max-messages'] ) && $options['max-messages'] ) {
+    echo "DEBUGGING: Limiting export amount to max " . $options['max-messages'] . " messages.\n";
+}
+
 if ( ! isset( $options['r'] ) ) {
 	$chat_db_path = $_SERVER['HOME'] . "/Library/Messages/chat.db";
 
@@ -509,6 +519,11 @@ if ( ! isset( $options['r'] ) ) {
 		$message_index = 0;
 		while ( $message = $messages->fetchArray( SQLITE3_ASSOC ) ) {
 		    $message_index++;
+
+		    // Debugging: Skip further compilation.
+		    if ( isset ( $options['max-messages'] ) && $options['max-messages'] > 0 && $message_index > $options['max-messages'] ) {
+		        break 1;
+            }
 
 			if ( isset( $options['progress'] ) ) {
 				progress_output( $chat_index, $progress_total, $message_index);
