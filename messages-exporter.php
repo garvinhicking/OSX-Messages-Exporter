@@ -16,38 +16,38 @@
 define( 'VERSION', 2 );
 
 $options = getopt(
-    "o:fhrd:t:",
-    array(
-        "output_directory:",
-        "flush",
-        "help",
-        "rebuild",
-        "database:",
-        "date-start:",
-        "date-stop:",
-        "timezone:",
-        "date-format:",
-        "no-video-preload",
-        "summary",
-        "html-head-template:",
-        "safe-filenames",
-        "contact-csv:",
-        "skip-attachments:",
-        "progress",
-        "html-toc-template:",
-        "html-toc-loop-template:",
-        "max-messages:"
-    )
+	"o:fhrd:t:",
+	array(
+		"output_directory:",
+		"flush",
+		"help",
+		"rebuild",
+		"database:",
+		"date-start:",
+		"date-stop:",
+		"timezone:",
+		"date-format:",
+		"no-video-preload",
+		"summary",
+		"html-head-template:",
+		"safe-filenames",
+		"contact-csv:",
+		"skip-attachments:",
+		"progress",
+		"html-toc-template:",
+		"html-toc-loop-template:",
+		"max-messages:"
+	)
 );
 
 if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
 	echo "Usage: messages-exporter.php [-o|--output_directory /path/to/output/directory] [-f|--flush] [-r|--rebuild] [-d|--database /path/to/chat/database]\n\n"
-        . "    OPTIONS:\n"
-        . "\n"
+		. "    OPTIONS:\n"
+		. "\n"
 
 		. "    [-o|--output_directory]\n"
-        . "      A path to the directory where the messages should be saved. Save files in the current directory by default.\n"
-        . "\n"
+		. "      A path to the directory where the messages should be saved. Save files in the current directory by default.\n"
+		. "\n"
 
 		. "    [-f|--flush]\n"
 		. "      Flushes the existing backup database, essentially starting over from scratch.\n"
@@ -58,66 +58,66 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
 		. "\n"
 
 		. "    [-d|--database /path/to/chat/database]\n"
-        . "      You can specify an alternate database file if, for example, you're running this script on a backup of chat.db from another machine.\n"
+		. "      You can specify an alternate database file if, for example, you're running this script on a backup of chat.db from another machine.\n"
 		. "\n"
 
-        . "    [--date-start YYYY-MM-DD]\n"
-        . "      Optionally, specify the first date that should be queried from the Messages database.\n"
+		. "    [--date-start YYYY-MM-DD]\n"
+		. "      Optionally, specify the first date that should be queried from the Messages database.\n"
 		. "\n"
 
-        . "    [--date-stop YYYY-MM-DD]\n"
-        . "      Optionally, specify the last date that should be queried from the Messages database.\n"
+		. "    [--date-stop YYYY-MM-DD]\n"
+		. "      Optionally, specify the last date that should be queried from the Messages database.\n"
 		. "\n"
 
-        . "    [-t|--timezone \"America/Los_Angeles\"]\n"
-        . "      Optionally, supply a timezone to use for any dates and times that are displayed. If none is supplied, times will be in UTC. For a list of valid timezones, see https://www.php.net/manual/en/timezones.php\n"
+		. "    [-t|--timezone \"America/Los_Angeles\"]\n"
+		. "      Optionally, supply a timezone to use for any dates and times that are displayed. If none is supplied, times will be in UTC. For a list of valid timezones, see https://www.php.net/manual/en/timezones.php\n"
 		. "\n"
 
-        . "    [--date-format \"n/j/Y, g:i A\"]\n"
-        . "      Optionally, supply a output dateformat to use. If none is supplied, a date will be shown like \"" . date("n/j/Y, g:i A", time()) . "\". For a list of valid timezones, see https://www.php.net/manual/en/datetime.format.php\n"
+		. "    [--date-format \"n/j/Y, g:i A\"]\n"
+		. "      Optionally, supply a output dateformat to use. If none is supplied, a date will be shown like \"" . date("n/j/Y, g:i A", time()) . "\". For a list of valid timezones, see https://www.php.net/manual/en/datetime.format.php\n"
 		. "\n"
 
-        . "    [--no-video-preload]\n"
-        . "      If set, the HTML markup will include a 'preload=\"none\"' attribute so on larger chats not all video files will be preloaded in a browser\n"
+		. "    [--no-video-preload]\n"
+		. "      If set, the HTML markup will include a 'preload=\"none\"' attribute so on larger chats not all video files will be preloaded in a browser\n"
 		. "\n"
 
-        . "    [--summary]\n"
-        . "      If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)\n"
+		. "    [--summary]\n"
+		. "      If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)\n"
 		. "\n"
 
-        . "    [--html-head-template /path/to/template/file.html]\n"
-        . "      If set, the script will use the specified filename inside the HTML <head> section. Variable substitution with {{CHAT_TITLE}} is available. Use this to use custom CSS rules or inject i.e. JavaScript\n"
+		. "    [--html-head-template /path/to/template/file.html]\n"
+		. "      If set, the script will use the specified filename inside the HTML <head> section. Variable substitution with {{CHAT_TITLE}} is available. Use this to use custom CSS rules or inject i.e. JavaScript\n"
 		. "\n"
 
-        . "    [--html-toc-template /path/to/template/file.html]\n"
-        . "      If set, the script will use the specified filename inside the HTML <head> section for the TOC. Variable substitution is available: {{TOC}} for the TOC loop (see below)\n"
+		. "    [--html-toc-template /path/to/template/file.html]\n"
+		. "      If set, the script will use the specified filename inside the HTML <head> section for the TOC. Variable substitution is available: {{TOC}} for the TOC loop (see below)\n"
 		. "\n"
 
 		. "    [--html-toc-loop-template /path/to/template/file.html]\n"
 		. "      If set, the script will use the specified filename inside the HTML TOC. Variable substitution is available: {{FILE}}, {{TITLE}}, {{DATE_FROM}}, {{DATE_TO}}, {{MESSAGE_FROM_BODY}}, {{MESSAGE_TO_BODY}} and {{STATS.xxx}}.\n"
 		. "\n"
 
-        . "    [--safe-filenames]\n"
-        . "      If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.\n"
+		. "    [--safe-filenames]\n"
+		. "      If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.\n"
 		. "\n"
 
-        . "    [--contact-csv /path/to/contacts.csv]\n"
-        . "      By default, contacts are matched by several lookup to system files, however a lookup may fail. In this case you can provide a CSV file with two columns \"Number,Name\" (Number can be an eMail address, too) that resolves a iMessage ID to a readable name. The CSV will take precedence over other address books, so you can use it to even override specific contact names that exist. Ensure the CSV file matches your local charset, use comma as separator, UNIX newlines and no enclosing quotes.\n"
+		. "    [--contact-csv /path/to/contacts.csv]\n"
+		. "      By default, contacts are matched by several lookup to system files, however a lookup may fail. In this case you can provide a CSV file with two columns \"Number,Name\" (Number can be an eMail address, too) that resolves a iMessage ID to a readable name. The CSV will take precedence over other address books, so you can use it to even override specific contact names that exist. Ensure the CSV file matches your local charset, use comma as separator, UNIX newlines and no enclosing quotes.\n"
 		. "\n"
 
-        . "    [--skip-attachments \"all|a,i,v,d\"]\n"
-        . "      When set to \"all\", all attachments will be replaced by a simple placeholder. Can be used if you just care about plaintexts. If no parameters to this is specified, all attachments are skipped. Else you can specify a comma-separated list of characters to each attachment type to skip (a=audio, v=video, i=image, d=document)\n"
+		. "    [--skip-attachments \"all|a,i,v,d\"]\n"
+		. "      When set to \"all\", all attachments will be replaced by a simple placeholder. Can be used if you just care about plaintexts. If no parameters to this is specified, all attachments are skipped. Else you can specify a comma-separated list of characters to each attachment type to skip (a=audio, v=video, i=image, d=document)\n"
 		. "\n"
 
-        . "    [--progress]\n"
-        . "      When set, you will get a (simple) progress report while compiling data and output.\n"
+		. "    [--progress]\n"
+		. "      When set, you will get a (simple) progress report while compiling data and output.\n"
 		. "\n"
 
 		. "    [--max-messages XX]\n"
 		. "      Debugging: When set, you can specify the maximum of messages to write for each chat; allows easier debugging.\n"
 		. "\n"
 
-        . "";
+		. "";
 	echo "\n";
 	die();
 }
@@ -188,28 +188,28 @@ if ( ! isset( $options['html-toc-template'] ) ) {
 <html>
 	<head>
 		<meta charset="UTF-8">
-	    <title>TOC</title>
-	    
+		<title>TOC</title>
+		
 		<style type="text/css">
 
-        body { font-family: "Helvetica Neue", sans-serif; font-size: 10pt;}
-        p { margin: 0; clear: both; }
+		body { font-family: "Helvetica Neue", sans-serif; font-size: 10pt;}
+		p { margin: 0; clear: both; }
 
-        ul.toc { list-style-type: none; margin: 0; padding: 0}
-        ul.toc li { border: 1px solid #e1e1e1; margin: 5px; padding: 1ex}
-        .date_from, .date_to { color: #8e8e93; font-variant: small-caps; font-weight: bold; font-size: 9pt; }
-        .message_from, .message_to { margin-left: 5px; }
-        .date_range { display: none }
-        ul.toc li:hover { background-color: #e1e1e1; }
-        .stats { color: #8e8e93; font-variant: small-caps; font-style: italic; font-size: 9pt; }
+		ul.toc { list-style-type: none; margin: 0; padding: 0}
+		ul.toc li { border: 1px solid #e1e1e1; margin: 5px; padding: 1ex}
+		.date_from, .date_to { color: #8e8e93; font-variant: small-caps; font-weight: bold; font-size: 9pt; }
+		.message_from, .message_to { margin-left: 5px; }
+		.date_range { display: none }
+		ul.toc li:hover { background-color: #e1e1e1; }
+		.stats { color: #8e8e93; font-variant: small-caps; font-style: italic; font-size: 9pt; }
 
 		</style>
 	</head>
 	<body>
-	    <ul class="toc">
-	    {{TOC}}
-	    </ul>
-    </body>
+		<ul class="toc">
+		{{TOC}}
+		</ul>
+	</body>
 </html>';
 }
 else {
@@ -222,19 +222,19 @@ else {
 
 if ( ! isset( $options['html-toc-loop-template'] ) ) {
 	$options['html-toc-loop-template'] = '
-        <li>
-            <div class="toc_link">
-                <a class="toc_link" href="{{FILE}}" target="chat">{{TITLE}}</a>
-            </div>
-            <div class="toc_meta">
-                <div class="date_from">{{DATE_FROM}}</div>
-                <div class="message_from">{{MESSAGE_FROM_BODY}}</div>
-                <div class="date_range">-</div>
-                <div class="date_to">{{DATE_TO}}</div>
-        		<div class="message_to">{{MESSAGE_TO_BODY}}</div>
-        		<div class="stats">{{STATS.IMAGES}} images, {{STATS.VIDEOS}} videos, {{STATS.AUDIO}} audio, {{STATS.DOCUMENTS}} files</div>
-            </div>
-        </li>
+		<li>
+			<div class="toc_link">
+				<a class="toc_link" href="{{FILE}}" target="chat">{{TITLE}}</a>
+			</div>
+			<div class="toc_meta">
+				<div class="date_from">{{DATE_FROM}}</div>
+				<div class="message_from">{{MESSAGE_FROM_BODY}}</div>
+				<div class="date_range">-</div>
+				<div class="date_to">{{DATE_TO}}</div>
+				<div class="message_to">{{MESSAGE_TO_BODY}}</div>
+				<div class="stats">{{STATS.IMAGES}} images, {{STATS.VIDEOS}} videos, {{STATS.AUDIO}} audio, {{STATS.DOCUMENTS}} files</div>
+			</div>
+		</li>
 	';
 }
 else {
@@ -269,24 +269,24 @@ if ( isset( $options['contact-csv'] ) ) {
 }
 
 $skip_attachments = array(
-    'audio'     => false,
-    'images'    => false,
-    'videos'    => false,
-    'documents' => false
+	'audio'     => false,
+	'images'    => false,
+	'videos'    => false,
+	'documents' => false
 );
 
 if ( isset ( $options['skip-attachments'] ) ) {
-    if ( strlen( $options['skip-attachments'] ) === 0 || $options['skip-attachments'] === 'all' ) {
-        $skip_attachments['audio'] = true;
+	if ( strlen( $options['skip-attachments'] ) === 0 || $options['skip-attachments'] === 'all' ) {
+		$skip_attachments['audio'] = true;
 		$skip_attachments['images'] = true;
 		$skip_attachments['videos'] = true;
 		$skip_attachments['documents'] = true;
-    } else {
-        $parts = explode(',', $options['skip-attachments']);
-        foreach( $parts AS $part ) {
-            $part = trim( $part );
-            switch( strtolower( $part )) {
-                case 'a':
+	} else {
+		$parts = explode(',', $options['skip-attachments']);
+		foreach( $parts AS $part ) {
+			$part = trim( $part );
+			switch( strtolower( $part )) {
+				case 'a':
 					$skip_attachments['audio'] = true;
 					break;
 
@@ -302,15 +302,15 @@ if ( isset ( $options['skip-attachments'] ) ) {
 					$skip_attachments['documents'] = true;
 					break;
 
-            }
-        }
-    }
+			}
+		}
+	}
 
-    if ( isset ( $options['summary'] ) ) {
-        echo "Skipping: \n";
-        if ( $skip_attachments['audio'] ) {
-            echo "  * Audio attachments\n";
-        }
+	if ( isset ( $options['summary'] ) ) {
+		echo "Skipping: \n";
+		if ( $skip_attachments['audio'] ) {
+			echo "  * Audio attachments\n";
+		}
 		if ( $skip_attachments['videos'] ) {
 			echo "  * Video attachments\n";
 		}
@@ -320,7 +320,7 @@ if ( isset ( $options['skip-attachments'] ) ) {
 		if ( $skip_attachments['documents'] ) {
 			echo "  * Files / Documents\n";
 		}
-    }
+	}
 }
 
 // Regular expression that may be used (when enabled) to transform directories and filenames to ASCII names.
@@ -381,7 +381,7 @@ $summary = array(
 		'images'    => 0,
 		'audio'     => 0,
 		'documents' => 0,
-        'total'     => 0
+		'total'     => 0
 	)
 );
 $progress_total = 0;
@@ -441,7 +441,7 @@ $updated_contacts_memo = array();
 
 
 if ( isset( $options['summary'] ) && isset ( $options['max-messages'] ) && $options['max-messages'] ) {
-    echo "DEBUGGING: Limiting export amount to max " . $options['max-messages'] . " messages.\n";
+	echo "DEBUGGING: Limiting export amount to max " . $options['max-messages'] . " messages.\n";
 }
 
 if ( ! isset( $options['r'] ) ) {
@@ -462,20 +462,20 @@ if ( ! isset( $options['r'] ) ) {
 	$db = new SQLite3( $chat_db_path, SQLITE3_OPEN_READONLY );
 	$chats = $db->query( "SELECT * FROM chat" );
 
-    if ( isset( $options['progress'] ) ) {
-        echo "Reading native iMessages...\n";
-        $total_chats_query = $db->query( "SELECT COUNT(*) AS count FROM chat" );
-        $total_chats_row = $total_chats_query->fetchArray( SQLITE3_ASSOC );
-        $progress_total = $total_chats_row['count'];
-    }
+	if ( isset( $options['progress'] ) ) {
+		echo "Reading native iMessages...\n";
+		$total_chats_query = $db->query( "SELECT COUNT(*) AS count FROM chat" );
+		$total_chats_row = $total_chats_query->fetchArray( SQLITE3_ASSOC );
+		$progress_total = $total_chats_row['count'];
+	}
 
-    $chat_index = 0;
+	$chat_index = 0;
 	while ( $row = $chats->fetchArray( SQLITE3_ASSOC ) ) {
-	    $chat_index++;
+		$chat_index++;
 
 		if ( isset( $options['progress'] ) ) {
-		    progress_output( $chat_index, $progress_total);
-        }
+			progress_output( $chat_index, $progress_total);
+		}
 
 		$guid = $row['guid'];
 		$chat_id = $row['ROWID'];
@@ -518,12 +518,12 @@ if ( ! isset( $options['r'] ) ) {
 
 		$message_index = 0;
 		while ( $message = $messages->fetchArray( SQLITE3_ASSOC ) ) {
-		    $message_index++;
+			$message_index++;
 
-		    // Debugging: Skip further compilation.
-		    if ( isset ( $options['max-messages'] ) && $options['max-messages'] > 0 && $message_index > $options['max-messages'] ) {
-		        break 1;
-            }
+			// Debugging: Skip further compilation.
+			if ( isset ( $options['max-messages'] ) && $options['max-messages'] > 0 && $message_index > $options['max-messages'] ) {
+				break 1;
+			}
 
 			if ( isset( $options['progress'] ) ) {
 				progress_output( $chat_index, $progress_total, $message_index);
@@ -790,11 +790,11 @@ while ( $row = $contacts->fetchArray() ) {
 
 	$first_message = $last_message = null;
 	$chat_stats = array(
-	    'videos'    => 0,
-        'images'    => 0,
-        'audio'     => 0,
-        'documents' => 0,
-    );
+		'videos'    => 0,
+		'images'    => 0,
+		'audio'     => 0,
+		'documents' => 0,
+	);
 
 	while ( $message = $messages->fetchArray() ) {
 		$progress_message_index++;
@@ -874,12 +874,12 @@ while ( $row = $contacts->fetchArray() ) {
 					$is_skipped_attachment = false;
 
 					if (
-					       // We previously saved the attachment but it's no longer available.
-					       ( ! file_exists( $file_to_copy ) && file_exists( $attachments_directory . $attachment_filename ) )
-					       ||
-					       ( file_exists( $attachments_directory . $attachment_filename )
-					         && sha1_file( $attachments_directory . $attachment_filename ) == sha1_file( $file_to_copy )
-					         && filesize( $attachments_directory . $attachment_filename ) == filesize( $file_to_copy )
+						   // We previously saved the attachment but it's no longer available.
+						   ( ! file_exists( $file_to_copy ) && file_exists( $attachments_directory . $attachment_filename ) )
+						   ||
+						   ( file_exists( $attachments_directory . $attachment_filename )
+							 && sha1_file( $attachments_directory . $attachment_filename ) == sha1_file( $file_to_copy )
+							 && filesize( $attachments_directory . $attachment_filename ) == filesize( $file_to_copy )
 						   )
 						) {
 						// They're the same file. We've probably already run this script on the message that includes this file.
@@ -889,13 +889,13 @@ while ( $row = $contacts->fetchArray() ) {
 
 						// If a file already exists where we want to save this attachment, add a suffix like -1, -2, -3, etc. until we get a unique filename.
 						// But don't copy the file if the destination file is the same as the one we're copying.
-                        // GH: Bugfix. Sadly there's a problem, because multiple identically named attachments (if an image got resized)
-                        //     can exist for the SAME timestamp (if those files were sent at the same time).
-                        //     So instead of renaming to a filename like "FullSizeRender-X.jpg" we now also use
-                        //     "2021-03-03_22-00-30-FullSizeRender-X.jpg" instead. By keeping the timestamp, the uniqueness
-                        //     will be applied on a next run. Before, a file would be renamed to FullSizeRender-X.jpg and then
-                        //     everytime the rebuild was executed, a new -X would be created.
-                        $performCopy = true;
+						// GH: Bugfix. Sadly there's a problem, because multiple identically named attachments (if an image got resized)
+						//     can exist for the SAME timestamp (if those files were sent at the same time).
+						//     So instead of renaming to a filename like "FullSizeRender-X.jpg" we now also use
+						//     "2021-03-03_22-00-30-FullSizeRender-X.jpg" instead. By keeping the timestamp, the uniqueness
+						//     will be applied on a next run. Before, a file would be renamed to FullSizeRender-X.jpg and then
+						//     everytime the rebuild was executed, a new -X would be created.
+						$performCopy = true;
 						while ( file_exists( $attachments_directory . $attachment_filename ) ) {
 							++$suffix;
 
@@ -929,11 +929,11 @@ while ( $row = $contacts->fetchArray() ) {
 								$summary['skipped']['images']++;
 								$summary['skipped']['total']++;
 								$is_skipped_attachment = true;
-                            } else if ( $skip_attachments['videos'] && strpos( $message['attachment_mime_type'], 'video' ) === 0 ) {
+							} else if ( $skip_attachments['videos'] && strpos( $message['attachment_mime_type'], 'video' ) === 0 ) {
 								$summary['skipped']['videos']++;
 								$summary['skipped']['total']++;
 								$is_skipped_attachment = true;
-                            } else if ( $skip_attachments['audio'] && strpos( $message['attachment_mime_type'], 'audio' ) === 0 ) {
+							} else if ( $skip_attachments['audio'] && strpos( $message['attachment_mime_type'], 'audio' ) === 0 ) {
 								$summary['skipped']['audio']++;
 								$summary['skipped']['total']++;
 								$is_skipped_attachment = true;
@@ -941,9 +941,9 @@ while ( $row = $contacts->fetchArray() ) {
 								$summary['skipped']['documents']++;
 								$summary['skipped']['total']++;
 								$is_skipped_attachment = true;
-                            } else {
-                                copy( $file_to_copy, $attachments_directory . $attachment_filename );
-                            }
+							} else {
+								copy( $file_to_copy, $attachments_directory . $attachment_filename );
+							}
 
 							$summary['attachments']++;
 						}
@@ -951,27 +951,27 @@ while ( $row = $contacts->fetchArray() ) {
 
 					$html_embed = '';
 
-                    if ( strpos( $message['attachment_mime_type'], 'image' ) === 0 ) {
+					if ( strpos( $message['attachment_mime_type'], 'image' ) === 0 ) {
 						if ( ! $is_skipped_attachment ) {
 							$html_embed = '<a class="imagelink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" target="_blank"><img loading="lazy" alt="Image" src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" /></a>';
-                        } else {
+						} else {
 							$html_embed = '<div class="skipped-attachment">[' . $chat_title_for_filesystem . '/' . $attachment_filename . ']</div>' . "\n";
-                        }
+						}
 						$summary['images']++;
 						$chat_stats['images']++;
 					}
 					else {
 						if ( strpos( $message['attachment_mime_type'], 'video' ) === 0 ) {
 							if ( ! $is_skipped_attachment ) {
-    							$html_embed = '<video controls' . ( isset( $options['no-video-preload'] ) ? ' preload="none"' : '') . '><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></video><br />';
+								$html_embed = '<video controls' . ( isset( $options['no-video-preload'] ) ? ' preload="none"' : '') . '><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></video><br />';
 							}
 							$summary['videos']++;
 							$chat_stats['videos']++;
 						}
 						else if ( strpos( $message['attachment_mime_type'], 'audio' ) === 0 ) {
 							if ( ! $is_skipped_attachment ) {
-    							$html_embed = '<audio controls' . ( isset( $options['no-video-preload'] ) ? ' preload="none"' : '') . '><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></audio><br />';
-                            }
+								$html_embed = '<audio controls' . ( isset( $options['no-video-preload'] ) ? ' preload="none"' : '') . '><source src="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" type="' . $message['attachment_mime_type'] . '"></audio><br />';
+							}
 
 							$summary['audio']++;
 							$chat_stats['audio']++;
@@ -984,8 +984,8 @@ while ( $row = $contacts->fetchArray() ) {
 						if ( $is_skipped_attachment ) {
 							$html_embed .= '<div class="skipped-attachment">[' . $chat_title_for_filesystem . '/' . $attachment_filename . ']</div>' . "\n";
 						} else {
-						    $html_embed .= '<a class="attachmentlink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" target="_blank">' . htmlspecialchars( $attachment_filename ) . '</a>';
-                        }
+							$html_embed .= '<a class="attachmentlink" href="' . $chat_title_for_filesystem . '/' . $attachment_filename . '" target="_blank">' . htmlspecialchars( $attachment_filename ) . '</a>';
+						}
 					}
 				}
 			}
@@ -1020,19 +1020,19 @@ while ( $row = $contacts->fetchArray() ) {
 	file_put_contents( $html_file, "\t</body>\n</html>", FILE_APPEND );
 
 	$chat_index[] = array(
-        'title'     => $chat_title,
-        'first'     => $first_message,
-        'last'      => $last_message,
-        'file'      => basename($html_file),
-        'stats'     => $chat_stats,
-        'latest'    => $last_message['this_time']
-    );
+		'title'     => $chat_title,
+		'first'     => $first_message,
+		'last'      => $last_message,
+		'file'      => basename($html_file),
+		'stats'     => $chat_stats,
+		'latest'    => $last_message['this_time']
+	);
 }
 
 usort($chat_index, function($a, $b) {
 	if ($a['latest'] > $b['latest']) {
-	    return -1;
-    }
+		return -1;
+	}
 
 	if ($a['latest'] < $b['latest']) {
 		return 1;
@@ -1042,26 +1042,26 @@ usort($chat_index, function($a, $b) {
 });
 
 if ( isset( $options['progress'] ) ) {
-    echo "\nMessages created. Building TOC/index.\n";
+	echo "\nMessages created. Building TOC/index.\n";
 }
 
 $chat_index_file = get_html_file('index');
 // Not templated, don't think there is a need to.
 if (isset ( $chat_index[0] ) && isset ( $chat_index[0]['file'] ) ) {
-    file_put_contents(
-        $chat_index_file,
-        '<!doctype html>
+	file_put_contents(
+		$chat_index_file,
+		'<!doctype html>
 <html>
 	<head>
-	    <title>Index</title>
+		<title>Index</title>
 	</head>
 	<!-- TODO:  How to make this work without frameset? Dunno. 
-	            This is useful here because the TOC can stay on screen and links are targeted.
-    -->
+				This is useful here because the TOC can stay on screen and links are targeted.
+	-->
 	<frameset cols="33%,*" bordercolor="#000000">
-        <frame src="toc.html" name="toc" marginwidth="0" marginheight="0" scrolling="auto">
-        <frame src="' . $chat_index[0]['file'] . '" name="chat" marginwidth="0" marginheight="0" scrolling="auto">	
-    </frameset>
+		<frame src="toc.html" name="toc" marginwidth="0" marginheight="0" scrolling="auto">
+		<frame src="' . $chat_index[0]['file'] . '" name="chat" marginwidth="0" marginheight="0" scrolling="auto">	
+	</frameset>
 </html>
 ' );
 }
@@ -1073,16 +1073,16 @@ foreach ( $chat_index AS $chat_group_cnt => $chat_meta ) {
 	$substitutionArray = array(
 		'{{FILE}}'              => $chat_meta['file'],
 		'{{TITLE}}'             => htmlspecialchars($chat_meta['title']),
-        '{{DATE_FROM}}'         => date( $options['date-format'], $chat_meta['first']['this_time'] + $timezone_offset ),
-        '{{MESSAGE_FROM_BODY}}' => trim( htmlspecialchars( substr($chat_meta['first']['content'], 0, $index_preview_length ) ) ),
-        '{{DATE_TO}}'           => date( $options['date-format'], $chat_meta['last']['this_time'] + $timezone_offset ),
-        '{{MESSAGE_TO_BODY}}'   => trim( htmlspecialchars( substr($chat_meta['last']['content'], 0, $index_preview_length ) ) ),
+		'{{DATE_FROM}}'         => date( $options['date-format'], $chat_meta['first']['this_time'] + $timezone_offset ),
+		'{{MESSAGE_FROM_BODY}}' => trim( htmlspecialchars( substr($chat_meta['first']['content'], 0, $index_preview_length ) ) ),
+		'{{DATE_TO}}'           => date( $options['date-format'], $chat_meta['last']['this_time'] + $timezone_offset ),
+		'{{MESSAGE_TO_BODY}}'   => trim( htmlspecialchars( substr($chat_meta['last']['content'], 0, $index_preview_length ) ) ),
 
-        '{{STATS.IMAGES}}'      => $chat_meta['stats']['images'],
+		'{{STATS.IMAGES}}'      => $chat_meta['stats']['images'],
 		'{{STATS.AUDIO}}'       => $chat_meta['stats']['audio'],
 		'{{STATS.VIDEOS}}'      => $chat_meta['stats']['videos'],
 		'{{STATS.DOCUMENTS}}'   => $chat_meta['stats']['documents'],
-    );
+	);
 
 	$toc_body .= strtr( $options['html-toc-loop-template'], $substitutionArray );
 }
@@ -1238,12 +1238,12 @@ function get_contact_nicename( $contact_notnice_name ) {
 }
 
 function get_safe_filename( $file ) {
-    // This is kind of a hack to try to remove some usual umlauts without requiring specific locales
-    // or iconv extension with ASCII//TRANSLIT or a static map.
-    // @todo Don't know how this might work with chinese or other character sets
-    if ( strpos($file = htmlentities($file, ENT_QUOTES, 'UTF-8'), '&') !== false ) {
-        $file = html_entity_decode(preg_replace('~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1', $file), ENT_QUOTES, 'UTF-8');
-    }
+	// This is kind of a hack to try to remove some usual umlauts without requiring specific locales
+	// or iconv extension with ASCII//TRANSLIT or a static map.
+	// @todo Don't know how this might work with chinese or other character sets
+	if ( strpos($file = htmlentities($file, ENT_QUOTES, 'UTF-8'), '&') !== false ) {
+		$file = html_entity_decode(preg_replace('~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1', $file), ENT_QUOTES, 'UTF-8');
+	}
 
 	return preg_replace( $GLOBALS['safe_filename_pattern'], $GLOBALS['safe_filename_replacement'], $file );
 }
@@ -1298,10 +1298,10 @@ function get_attachments_directory( $chat_title_for_filesystem ) {
 }
 
 function progress_output($done, $total, $extra = '') {
-    $extraOut = '';
-    if ($extra !== '') {
-        $extraOut .= ' [' . $extra . ']';
-    }
+	$extraOut = '';
+	if ($extra !== '') {
+		$extraOut .= ' [' . $extra . ']';
+	}
 	$write = "\033[0G\033[2K " . $done . "/" . $total . $extraOut;
 	fwrite(STDERR, $write);
 }
