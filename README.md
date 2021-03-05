@@ -39,6 +39,8 @@ $ messages-exporter.php [-o|--output_directory output_directory]
                         If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)
                         [--safe-filenames]
                         If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.
+                        [--progress]\n
+                        When set, you will get a (simple) progress report while compiling data and output.
 ```
 
 Caveats

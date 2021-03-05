@@ -29,6 +29,7 @@ $options = getopt(
         "date-format:",
         "summary",
         "safe-filenames",
+        "progress",
     )
 );
 
@@ -75,6 +76,10 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
 
         . "    [--safe-filenames]\n"
         . "      If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.\n"
+		. "\n"
+
+        . "    [--progress]\n"
+        . "      When set, you will get a (simple) progress report while compiling data and output.\n"
 		. "\n"
 
         . "";
@@ -175,6 +180,7 @@ $summary = array(
         'total'     => 0
 	)
 );
+$progress_total = 0;
 $database_file = $options['o'] . 'messages-exporter.db';
 
 if ( ! isset( $options['r'] ) ) {
@@ -247,7 +253,21 @@ if ( ! isset( $options['r'] ) ) {
 	$db = new SQLite3( $chat_db_path, SQLITE3_OPEN_READONLY );
 	$chats = $db->query( "SELECT * FROM chat" );
 
+    if ( isset( $options['progress'] ) ) {
+        echo "Reading native iMessages...\n";
+        $total_chats_query = $db->query( "SELECT COUNT(*) AS count FROM chat" );
+        $total_chats_row = $total_chats_query->fetchArray( SQLITE3_ASSOC );
+        $progress_total = $total_chats_row['count'];
+    }
+
+    $chat_index = 0;
 	while ( $row = $chats->fetchArray( SQLITE3_ASSOC ) ) {
+	    $chat_index++;
+
+		if ( isset( $options['progress'] ) ) {
+		    progress_output( $chat_index, $progress_total);
+        }
+
 		$guid = $row['guid'];
 		$chat_id = $row['ROWID'];
 		$contactArray = explode( ';', $guid );
@@ -287,7 +307,14 @@ if ( ! isset( $options['r'] ) ) {
 
 		$messages = $statement->execute();
 
+		$message_index = 0;
 		while ( $message = $messages->fetchArray( SQLITE3_ASSOC ) ) {
+		    $message_index++;
+
+			if ( isset( $options['progress'] ) ) {
+				progress_output( $chat_index, $progress_total, $message_index);
+			}
+
 			if ( strpos( $chat_title, ', ' ) === false && ! isset( $updated_contacts_memo[ $message['contact'] ] ) ) {
 				// Get all existing chat names for this contact ID.
 				// If the contact name has changed, update it for old messages and update the folder and filenames.
@@ -486,11 +513,21 @@ if ( ! isset( $options['r'] ) ) {
 	}
 }
 
+if ( isset( $options['progress'] ) ) {
+	echo "\nNative iMessages prepared, compiling output...\n";
+	$total_chats_query = $temp_db->query( "SELECT COUNT(*) AS count FROM messages" );
+	$total_chats_row = $total_chats_query->fetchArray( SQLITE3_ASSOC );
+	$progress_total = $total_chats_row['count'];
+}
+
 $contacts = $temp_db->query( "SELECT chat_title FROM messages GROUP BY chat_title ORDER BY chat_title ASC" );
 
 if ( isset( $options['summary'] ) ) {
 	echo "Using HTML output directory: " . $options['o'] . "\n";
 }
+
+$chat_index = array();
+$progress_message_index = 0;
 
 while ( $row = $contacts->fetchArray() ) {
 	$chat_title = $row['chat_title'];
@@ -545,6 +582,12 @@ while ( $row = $contacts->fetchArray() ) {
     );
 
 	while ( $message = $messages->fetchArray() ) {
+		$progress_message_index++;
+
+		if ( isset( $options['progress'] ) ) {
+			progress_output( $progress_message_index, $progress_total );
+		}
+
 		$summary['messages']++;
 		$message['this_time'] = strtotime( $message['timestamp'] );
 
@@ -721,6 +764,10 @@ while ( $row = $contacts->fetchArray() ) {
 	}
 
 	file_put_contents( $html_file, "\t</body>\n</html>", FILE_APPEND );
+if ( isset( $options['progress'] ) ) {
+    echo "\nMessages created. Building TOC/index.\n";
+}
+
 if ( isset( $options['summary'] ) ) {
 	echo "\nBuild finished. Summary:\n";
 	echo "========================\n";
@@ -923,4 +970,13 @@ function get_attachments_directory( $chat_title_for_filesystem ) {
 	global $options;
 
 	return $options['o'] . $chat_title_for_filesystem . '/';
+}
+
+function progress_output($done, $total, $extra = '') {
+    $extraOut = '';
+    if ($extra !== '') {
+        $extraOut .= ' [' . $extra . ']';
+    }
+	$write = "\033[0G\033[2K " . $done . "/" . $total . $extraOut;
+	fwrite(STDERR, $write);
 }
