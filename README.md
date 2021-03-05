@@ -33,6 +33,26 @@ $ messages-exporter.php [-o|--output_directory output_directory]
                         Optionally, specify the last date that should be queried from the Messages database.
                         [-t|--timezone "America/Los_Angeles"]
                         Optionally, supply a timezone to use for any dates and times that are displayed. If none is supplied, times will be in UTC. For a list of valid timezones, see https://www.php.net/manual/en/timezones.php
+                        [--date-format "n/j/Y, g:i A"]
+                        Optionally, supply a output dateformat to use. If none is supplied, a date will be shown like "3/5/2021, 12:43 PM". For a list of valid timezones, see https://www.php.net/manual/en/datetime.format.php
+                        [--no-video-preload]
+                        If set, the HTML markup will include a 'preload="none"' attribute so on larger chats not all video files will be preloaded in a browser
+                        [--summary]
+                        If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)
+                        [--html-head-template /path/to/template/file.html]
+                        If set, the script will use the specified filename inside the HTML <head> section. Variable substitution with {{CHAT_TITLE}} is available. Use this to use custom CSS rules or inject i.e. JavaScript
+                        [--html-toc-template /path/to/template/file.html]
+                        If set, the script will use the specified filename inside the HTML <head> section for the TOC. Variable substitution is available: {{TOC}} for the TOC loop (see below)
+		                [--html-toc-loop-template /path/to/template/file.html]
+		                If set, the script will use the specified filename inside the HTML TOC. Variable substitution is available: {{FILE}}, {{TITLE}}, {{DATE_FROM}}, {{DATE_TO}}, {{MESSAGE_FROM_BODY}}, {{MESSAGE_TO_BODY}}.
+                        [--safe-filenames]
+                        If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.
+                        [--contact-csv /path/to/contacts.csv]
+                        By default, contacts are matched by several lookup to system files, however a lookup may fail. In this case you can provide a CSV file with two columns \"Number,Name\" (Number can be an eMail address, too) that resolves a iMessage ID to a readable name. The CSV will take precedence over other address books, so you can use it to even override specific contact names that exist. Ensure the CSV file matches your local charset, use comma as separator, UNIX newlines and no enclosing quotes.
+                        [--skip-attachments "all|a,i,v,d"]
+                        When set to "all", all attachments will be replaced by a simple placeholder. Can be used if you just care about plaintexts. If no parameters to this is specified, all attachments are skipped. Else you can specify a comma-separated list of characters to each attachment type to skip (a=audio, v=video, i=image, d=document)
+                        [--progress]\n
+                        When set, you will get a (simple) progress report while compiling data and output.
 ```
 
 Caveats
@@ -50,3 +70,4 @@ Caveats
 Questions?
 ==========
 Email me at cfinke@gmail.com.
+(Enhanced by Garvin Hicking, @supergarv on Twitter)
