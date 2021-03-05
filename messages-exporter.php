@@ -28,6 +28,7 @@ $options = getopt(
         "timezone:",
         "date-format:",
         "summary",
+        "safe-filenames",
     )
 );
 
@@ -72,6 +73,10 @@ if ( isset( $options['h'] ) || isset( $options['help'] ) ) {
         . "      If set, the script will return a small summary with number of exported messages/chats and possible errors (missing attachments)\n"
 		. "\n"
 
+        . "    [--safe-filenames]\n"
+        . "      If set, directory and filenames will only contain characters from A-Z, no special characters, no spaces.\n"
+		. "\n"
+
         . "";
 	echo "\n";
 	die();
@@ -111,6 +116,11 @@ if ( isset( $options['d'] ) ) {
 if ( ! isset( $options['date-format'] ) ) {
 	$options['date-format'] = "n/j/Y, g:i A";
 }
+
+// Regular expression that may be used (when enabled) to transform directories and filenames to ASCII names.
+// Anything NON-ASCII will be changed to the safe_filename_replacement (you can use "" to get shorter filenames; multi-char replacements at your own risk
+$safe_filename_pattern = '@[^a-zA-Z0-9\.\-_]@';
+$safe_filename_replacement = '-';
 
 # Ensure a trailing slash on the output directory.
 $options['o'] = rtrim( $options['o'], '/' ) . '/';
@@ -579,7 +589,13 @@ while ( $row = $contacts->fetchArray() ) {
 			}
 			else {
 				// Give the attachment filename a date-based prefix to avoid filename collisions if this backup is ever migrated to another machine.
-				$attachment_filename = date( 'Y-m-d H i s', strtotime( $message['timestamp'] ) ) . ' - ' . basename( $message['content'] );
+				if ( isset ( $GLOBALS['options']['safe-filenames'] ) ) {
+					$basename = get_safe_filename( basename( $message['content'] ) );
+					$attachment_filename = date( 'Y-m-d_H-i-s', strtotime( $message['timestamp'] ) ) . '-' . $basename;
+				}
+				else {
+					$attachment_filename = date( 'Y-m-d H i s', strtotime( $message['timestamp'] ) ) . ' - ' . basename( $message['content'] );
+				}
 
 				$file_to_copy = preg_replace( '/^~/', $_SERVER['HOME'], $message['content'] );
 
@@ -849,6 +865,17 @@ function get_contact_nicename( $contact_notnice_name ) {
 	return $contact_nicename_map[ $contact_notnice_name ];
 }
 
+function get_safe_filename( $file ) {
+    // This is kind of a hack to try to remove some usual umlauts without requiring specific locales
+    // or iconv extension with ASCII//TRANSLIT or a static map.
+    // @todo Don't know how this might work with chinese or other character sets
+    if ( strpos($file = htmlentities($file, ENT_QUOTES, 'UTF-8'), '&') !== false ) {
+        $file = html_entity_decode(preg_replace('~&([a-z]{1,2})(?:acute|cedil|circ|grave|lig|orn|ring|slash|tilde|uml);~i', '$1', $file), ENT_QUOTES, 'UTF-8');
+    }
+
+	return preg_replace( $GLOBALS['safe_filename_pattern'], $GLOBALS['safe_filename_replacement'], $file );
+}
+
 function get_chat_title_for_filesystem( $chat_title ) {
 	$chat_title_for_filesystem = $chat_title;
 
@@ -860,17 +887,27 @@ function get_chat_title_for_filesystem( $chat_title ) {
 	// Colon and slash are prohibited in filenames on Mac.
 	$chat_title_for_filesystem = str_replace( array( ":", "/" ), "-", $chat_title_for_filesystem );
 
+	// Check for valid filenames and remove anything that is not ASCII (helpful for i.e. Dropbox syncing where many filenames will clash with
+	// different OSes
+	if ( isset ( $GLOBALS['options']['safe-filenames'] ) ) {
+		$chat_title_for_filesystem = get_safe_filename( $chat_title_for_filesystem );
+		$separator = $GLOBALS['safe_filename_replacement'];
+	}
+	else {
+		$separator = ' ';
+	}
+
 	if ( strlen( $chat_title_for_filesystem . ".html" ) > 255 ) {
 		$unique_chat_hash = "{" . md5( $chat_title ) . "}";
 
 		// Shorten the filename until there's enough room for the identifying hash and a space.
 		while ( strlen( $chat_title_for_filesystem . ".html" ) > 255 - 1 - strlen( $unique_chat_hash ) ) {
-			$chat_title_for_filesystem = explode( " ", $chat_title_for_filesystem );
+			$chat_title_for_filesystem = explode( $separator, $chat_title_for_filesystem );
 			array_pop( $chat_title_for_filesystem );
-			$chat_title_for_filesystem = join( " ", $chat_title_for_filesystem );
+			$chat_title_for_filesystem = join( $separator, $chat_title_for_filesystem );
 		}
 
-		$chat_title_for_filesystem .= " " . $unique_chat_hash;
+		$chat_title_for_filesystem .= $separator . $unique_chat_hash;
 	}
 
 	return $chat_title_for_filesystem;
